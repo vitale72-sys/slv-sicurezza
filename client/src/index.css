@@ -174,16 +174,7 @@ tr:hover td { background: #fafafa; }
 .scheda-section { margin-bottom: 20px; }
 .scheda-section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
 
-/* Responsive */
 /* Azienda row */
-.azienda-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 10px; border: 1px solid #e8ecf4; background: #fff; margin-bottom: 10px; gap: 12px; flex-wrap: wrap; transition: box-shadow 0.15s; }
-.azienda-row:hover { box-shadow: 0 2px 12px rgba(15,52,96,0.08); border-color: #bdd0ea; }
-.azienda-info h3 { font-size: 16px; font-weight: 600; color: #1a1a2e; }
-.azienda-info p { font-size: 13px; color: #6b7280; margin-top: 2px; }
-.btn-apri { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; background: #0f3460; color: #fff; transition: all 0.15s; white-space: nowrap; }
-.btn-apri:hover { background: #16427a; }
-
-/* Responsive */
 .azienda-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 10px; border: 1px solid #e8ecf4; background: #fff; margin-bottom: 10px; gap: 12px; flex-wrap: wrap; transition: box-shadow 0.15s; }
 .azienda-row:hover { box-shadow: 0 2px 12px rgba(15,52,96,0.08); border-color: #bdd0ea; }
 .azienda-info h3 { font-size: 16px; font-weight: 600; color: #1a1a2e; }
@@ -208,7 +199,7 @@ tr:hover td { background: #fafafa; }
   .cal-day-num { font-size: 11px; }
   .cal-event { display: none; }
   .badge-card { width: 100%; max-width: 320px; }
-  .modal { max-width: 100%; margin: 0; border-radius: 12px; }
+  .modal { max-width: 100%; border-radius: 12px; }
   .azienda-row { flex-direction: column; align-items: flex-start; }
   .btn-apri { width: 100%; justify-content: center; }
   table { min-width: 100%; font-size: 13px; }
@@ -224,20 +215,4 @@ tr:hover td { background: #fafafa; }
   .btn { padding: 7px 12px; font-size: 13px; }
   .btn-sm { padding: 5px 9px; font-size: 12px; }
   .topbar-title { font-size: 15px; }
-}
-}
-
-@media(max-width: 480px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .tab { padding: 8px 8px; font-size: 11px; }
-  .btn { padding: 7px 12px; font-size: 13px; }
-  .btn-sm { padding: 5px 9px; font-size: 12px; }
-  .topbar-title { font-size: 15px; }
-}
-}
-
-@media(max-width: 480px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .tabs { font-size: 13px; }
-  .tab { padding: 9px 12px; }
 }
