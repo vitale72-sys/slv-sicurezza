@@ -10,7 +10,6 @@ export default function Aziende() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
-
   const emptyForm = { nome:'', piva:'', indirizzo:'', referente:'', telefono:'', email:'', settore:'', numero_dipendenti:'' };
 
   useEffect(() => {
@@ -39,54 +38,51 @@ export default function Aziende() {
   }
 
   const f = (k,v) => setForm(x=>({...x,[k]:v}));
-
   if (loading) return <div className="page">Caricamento...</div>;
 
   return (
     <div className="page">
-      <div className="topbar" style={{marginLeft:-24,marginRight:-24,marginTop:-24,marginBottom:24,paddingLeft:24,paddingRight:24}}>
-        <span className="topbar-title">Aziende clienti</span>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22,flexWrap:'wrap',gap:10}}>
+        <span style={{fontSize:18,fontWeight:700}}>Aziende clienti</span>
         {user?.role==='admin' && (
-          <button className="btn btn-primary btn-sm" onClick={()=>{setForm(emptyForm);setShowModal(true)}}>
+          <button className="btn btn-primary" onClick={()=>{setForm(emptyForm);setShowModal(true)}}>
             + Nuova azienda
           </button>
         )}
       </div>
 
-      <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead><tr>
-              <th>Nome azienda</th><th>P.IVA</th><th>Referente</th><th>Settore</th>
-              <th>Dipendenti</th><th>Contatto</th><th></th>
-            </tr></thead>
-            <tbody>
-              {aziende.map(a=>(
-                <tr key={a.id}>
-                  <td style={{fontWeight:500,cursor:'pointer',color:'#0f3460'}} onClick={()=>navigate(`/aziende/${a.id}`)}>
-                    {a.nome}
-                  </td>
-                  <td>{a.piva||'—'}</td>
-                  <td>{a.referente||'—'}</td>
-                  <td>{a.settore||'—'}</td>
-                  <td>{a.numero_dipendenti||0}</td>
-                  <td>{a.telefono||a.email||'—'}</td>
-                  <td>
-                    {user?.role==='admin' && (
-                      <div style={{display:'flex',gap:6}}>
-                        <button className="btn btn-secondary btn-sm" onClick={()=>{setForm({...a});setShowModal(true)}}>Modifica</button>
-                        <button className="btn btn-danger btn-sm" onClick={()=>handleDelete(a.id)}>Elimina</button>
-                      </div>
-                    )}
-                    <button className="btn btn-secondary btn-sm" style={{marginLeft:user?.role==='admin'?0:0}} onClick={()=>navigate(`/aziende/${a.id}`)}>Dettaglio →</button>
-                  </td>
-                </tr>
-              ))}
-              {aziende.length===0 && <tr><td colSpan="7" style={{textAlign:'center',color:'#9ca3af',padding:40}}>Nessuna azienda. Aggiungine una.</td></tr>}
-            </tbody>
-          </table>
+      {aziende.length===0 ? (
+        <div className="empty">Nessuna azienda. Aggiungine una.</div>
+      ) : (
+        <div style={{display:'grid',gap:12}}>
+          {aziende.map(a=>(
+            <div key={a.id} className="azienda-row">
+              <div className="azienda-info" style={{flex:1}}>
+                <h3>{a.nome}</h3>
+                <p>
+                  {[a.settore, a.referente, a.telefono||a.email].filter(Boolean).join(' · ')||'Nessun dettaglio'}
+                  {a.numero_dipendenti>0 && ` · ${a.numero_dipendenti} dipendenti`}
+                </p>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                {user?.role==='admin' && (
+                  <>
+                    <button className="btn btn-secondary btn-sm" onClick={()=>{setForm({...a});setShowModal(true)}}>
+                      Modifica
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={()=>handleDelete(a.id)}>
+                      Elimina
+                    </button>
+                  </>
+                )}
+                <button className="btn-apri" onClick={()=>navigate(`/aziende/${a.id}`)}>
+                  Apri azienda →
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
