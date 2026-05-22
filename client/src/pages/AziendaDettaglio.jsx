@@ -46,9 +46,7 @@ export default function AziendaDettaglio() {
   }
 
   function downloadBadgePDF() {
-    // Badge formato tessera: 85.6mm x 53.98mm
-    // A 96dpi * 3 = 288dpi per qualità stampa
-    const W = 969, H = 612; // 85.6 x 54 mm a 288dpi
+    const W = 969, H = 612;
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
@@ -64,98 +62,112 @@ export default function AziendaDettaglio() {
 
     // Banda sinistra blu
     ctx.fillStyle = '#0f3460';
-    ctx.fillRect(0, 0, 240, H);
+    ctx.fillRect(0, 0, 260, H);
 
-    // Spazio foto nella banda sinistra
+    // Foto o iniziali
     if (fotoUrl) {
       const img = new Image();
       img.src = fotoUrl;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(120, 180, 90, 0, Math.PI*2);
+      ctx.arc(130, 160, 90, 0, Math.PI*2);
       ctx.clip();
-      ctx.drawImage(img, 30, 90, 180, 180);
+      ctx.drawImage(img, 40, 70, 180, 180);
       ctx.restore();
     } else {
-      // Placeholder foto
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.beginPath();
-      ctx.arc(120, 180, 90, 0, Math.PI*2);
+      ctx.arc(130, 160, 90, 0, Math.PI*2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.font = 'bold 72px Arial';
       ctx.textAlign = 'center';
       const iniziali = `${badgeLav.nome?.[0]||''}${badgeLav.cognome?.[0]||''}`.toUpperCase();
-      ctx.fillText(iniziali, 120, 205);
+      ctx.fillText(iniziali, 130, 185);
     }
 
-    // Nome azienda in fondo alla banda
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = 'bold 18px Arial';
+    // Nome azienda
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'center';
-    // Tronca nome azienda se lungo
     const nomeAz = azienda?.nome || '';
-    ctx.fillText(nomeAz.length > 22 ? nomeAz.slice(0,20)+'...' : nomeAz, 120, 380);
+    ctx.fillText(nomeAz.length > 20 ? nomeAz.slice(0,18)+'...' : nomeAz, 130, 300);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '14px Arial';
-    ctx.fillText(azienda?.settore || '', 120, 405);
+    // P.IVA
+    if (azienda?.piva) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = '14px Arial';
+      ctx.fillText(`P.IVA: ${azienda.piva}`, 130, 325);
+    }
+
+    // Settore
+    if (azienda?.settore) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '13px Arial';
+      ctx.fillText(azienda.settore, 130, 348);
+    }
+
+    // Indirizzo
+    if (azienda?.indirizzo) {
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = '12px Arial';
+      const ind = azienda.indirizzo.length > 26 ? azienda.indirizzo.slice(0,24)+'...' : azienda.indirizzo;
+      ctx.fillText(ind, 130, 368);
+    }
 
     // ─── Contenuto principale (parte destra) ───
-    const X = 265; // inizio area destra
+    const X = 285;
 
     // Nome e cognome
     ctx.fillStyle = '#0f3460';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = 'bold 34px Arial';
     ctx.textAlign = 'left';
     const nomeCompleto = `${badgeLav.cognome.toUpperCase()} ${badgeLav.nome}`;
-    ctx.fillText(nomeCompleto, X, 70);
+    ctx.fillText(nomeCompleto.length > 28 ? nomeCompleto.slice(0,26)+'...' : nomeCompleto, X, 65);
 
-    // Linea separatrice
+    // Linea
     ctx.strokeStyle = '#e8ecf4';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(X, 85);
-    ctx.lineTo(W-20, 85);
+    ctx.moveTo(X, 80);
+    ctx.lineTo(W-20, 80);
     ctx.stroke();
 
     // Mansione
     ctx.fillStyle = '#374151';
-    ctx.font = '24px Arial';
-    ctx.fillText(badgeLav.mansione || '', X, 120);
+    ctx.font = '22px Arial';
+    ctx.fillText(badgeLav.mansione || '', X, 115);
 
     // Data assunzione
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '18px Arial';
     if (badgeLav.data_assunzione) {
-      ctx.fillText(`Assunto il: ${new Date(badgeLav.data_assunzione).toLocaleDateString('it-IT')}`, X, 155);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '17px Arial';
+      ctx.fillText(`Assunto il: ${new Date(badgeLav.data_assunzione).toLocaleDateString('it-IT')}`, X, 148);
     }
 
     // Codice fiscale
     if (badgeLav.codice_fiscale) {
       ctx.fillStyle = '#6b7280';
-      ctx.font = '16px Arial';
-      ctx.fillText(`C.F.: ${badgeLav.codice_fiscale}`, X, 185);
+      ctx.font = '15px Arial';
+      ctx.fillText(`C.F.: ${badgeLav.codice_fiscale}`, X, 175);
     }
 
     // Ruoli sicurezza
     if (badgeLav.ruoli_sicurezza?.length > 0) {
       ctx.fillStyle = '#374151';
-      ctx.font = 'bold 15px Arial';
-      ctx.fillText('Ruoli:', X, 225);
-      let rx = X + 55;
+      ctx.font = 'bold 14px Arial';
+      ctx.fillText('Ruoli:', X, 210);
+      let rx = X + 52;
       badgeLav.ruoli_sicurezza.slice(0,3).forEach(r => {
-        const rShort = r.replace('Addetto ', '').replace('(Rischio ', '(');
-        ctx.fillStyle = '#0f3460';
-        ctx.font = 'bold 13px Arial';
+        const rShort = r.replace('Addetto ','').replace('(Rischio ','(');
+        ctx.font = '12px Arial';
         const w = ctx.measureText(rShort).width + 16;
         ctx.fillStyle = '#dbeafe';
         ctx.beginPath();
-        ctx.roundRect(rx, 210, w, 22, 4);
+        ctx.roundRect(rx, 196, w, 22, 4);
         ctx.fill();
         ctx.fillStyle = '#1e40af';
-        ctx.font = '12px Arial';
-        ctx.fillText(rShort, rx+8, 225);
+        ctx.fillText(rShort, rx+8, 211);
         rx += w + 8;
       });
     }
@@ -164,34 +176,23 @@ export default function AziendaDettaglio() {
     ctx.strokeStyle = '#e8ecf4';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(X, 260);
-    ctx.lineTo(W-20, 260);
+    ctx.moveTo(X, 248);
+    ctx.lineTo(W-20, 248);
     ctx.stroke();
 
-    // QR code + testo
+    // QR code
     const renderFinal = () => {
       if (qrDataUrl) {
         const qrImg = new Image();
         qrImg.onload = () => {
-          ctx.drawImage(qrImg, X, 275, 150, 150);
-
-          // Info accanto al QR
+          ctx.drawImage(qrImg, X, 262, 155, 155);
           ctx.fillStyle = '#374151';
-          ctx.font = 'bold 15px Arial';
-          ctx.fillText('Verifica attestati e visite:', X+165, 310);
+          ctx.font = 'bold 14px Arial';
+          ctx.fillText('Verifica attestati e visite:', X+170, 300);
           ctx.fillStyle = '#6b7280';
           ctx.font = '13px Arial';
-          // Spezza URL su più righe se lungo
-          ctx.fillText('Scansiona il QR code', X+165, 335);
-          ctx.fillText('con il tuo smartphone', X+165, 355);
-
-          // Footer
-          ctx.fillStyle = '#9ca3af';
-          ctx.font = '14px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(`SLV Sicurezza · Salvatore Vitale · geometra`, W/2+60, H-18);
-
-          // Converti in PDF
+          ctx.fillText('Scansiona il QR code', X+170, 325);
+          ctx.fillText('con il tuo smartphone', X+170, 345);
           savePDF(canvas, W, H);
         };
         qrImg.src = qrDataUrl;
@@ -199,24 +200,20 @@ export default function AziendaDettaglio() {
         savePDF(canvas, W, H);
       }
     };
-
     renderFinal();
   }
 
   function savePDF(canvas, W, H) {
-    // Crea PDF con jsPDF embedded via script
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
     script.onload = () => {
       const { jsPDF } = window.jspdf;
-      // 85.6 x 54 mm formato tessera
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
       const imgData = canvas.toDataURL('image/png');
       doc.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
       doc.save(`badge_${badgeLav.cognome}_${badgeLav.nome}.pdf`);
     };
     script.onerror = () => {
-      // Fallback PNG se jsPDF non carica
       const link = document.createElement('a');
       link.download = `badge_${badgeLav.cognome}_${badgeLav.nome}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -314,7 +311,6 @@ export default function AziendaDettaglio() {
         </div>
       </div>
 
-      {/* Modal aggiungi/modifica */}
       {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
           <div className="modal">
@@ -347,36 +343,32 @@ export default function AziendaDettaglio() {
               <button className="modal-close" onClick={()=>setBadgeLav(null)}>×</button>
             </div>
             <div className="modal-body">
-
               {/* Anteprima badge orizzontale */}
-              <div style={{
-                width:'100%', maxWidth:500, margin:'0 auto',
-                background:'#fff', border:'3px solid #0f3460', borderRadius:12,
-                display:'flex', overflow:'hidden', minHeight:160
-              }}>
+              <div style={{width:'100%',maxWidth:500,margin:'0 auto',background:'#fff',border:'3px solid #0f3460',borderRadius:12,display:'flex',overflow:'hidden',minHeight:160}}>
                 {/* Colonna sinistra */}
-                <div style={{
-                  width:140, background:'#0f3460', display:'flex',
-                  flexDirection:'column', alignItems:'center', justifyContent:'center',
-                  padding:'16px 8px', gap:8, flexShrink:0
-                }}>
+                <div style={{width:150,background:'#0f3460',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'14px 8px',gap:6,flexShrink:0}}>
                   {fotoUrl ? (
-                    <img src={fotoUrl} alt="foto" style={{width:80,height:80,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,255,255,0.3)'}}/>
+                    <img src={fotoUrl} alt="foto" style={{width:76,height:76,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,255,255,0.3)'}}/>
                   ) : (
-                    <div style={{width:80,height:80,borderRadius:'50%',background:'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:'#fff'}}>
+                    <div style={{width:76,height:76,borderRadius:'50%',background:'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:'#fff'}}>
                       {badgeLav.nome?.[0]}{badgeLav.cognome?.[0]}
                     </div>
                   )}
-                  <div style={{fontSize:11,color:'rgba(255,255,255,0.9)',fontWeight:700,textAlign:'center',wordBreak:'break-word'}}>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.95)',fontWeight:700,textAlign:'center',wordBreak:'break-word',marginTop:4}}>
                     {azienda?.nome}
                   </div>
-                  {azienda?.settore && <div style={{fontSize:10,color:'rgba(255,255,255,0.55)',textAlign:'center'}}>{azienda.settore}</div>}
+                  {azienda?.piva && (
+                    <div style={{fontSize:9,color:'rgba(255,255,255,0.65)',textAlign:'center'}}>P.IVA: {azienda.piva}</div>
+                  )}
+                  {azienda?.settore && (
+                    <div style={{fontSize:9,color:'rgba(255,255,255,0.5)',textAlign:'center'}}>{azienda.settore}</div>
+                  )}
                 </div>
 
                 {/* Colonna destra */}
-                <div style={{flex:1, padding:'14px 16px', display:'flex', flexDirection:'column', justifyContent:'space-between'}}>
+                <div style={{flex:1,padding:'14px 16px',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
                   <div>
-                    <div style={{fontSize:18,fontWeight:700,color:'#0f3460'}}>{badgeLav.cognome.toUpperCase()} {badgeLav.nome}</div>
+                    <div style={{fontSize:17,fontWeight:700,color:'#0f3460'}}>{badgeLav.cognome.toUpperCase()} {badgeLav.nome}</div>
                     <div style={{fontSize:13,color:'#374151',marginTop:2}}>{badgeLav.mansione||''}</div>
                     {badgeLav.data_assunzione && (
                       <div style={{fontSize:12,color:'#6b7280',marginTop:3}}>
@@ -396,9 +388,8 @@ export default function AziendaDettaglio() {
                       </div>
                     )}
                   </div>
-                  <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginTop:10}}>
-                    <div style={{fontSize:10,color:'#9ca3af'}}>SLV Sicurezza · Salvatore Vitale</div>
-                    {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{width:56,height:56}}/>}
+                  <div style={{display:'flex',alignItems:'flex-end',justifyContent:'flex-end',marginTop:10}}>
+                    {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{width:52,height:52}}/>}
                   </div>
                 </div>
               </div>
@@ -406,13 +397,10 @@ export default function AziendaDettaglio() {
               {/* Carica foto */}
               <div style={{marginTop:16,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
                 <label style={{fontSize:13,fontWeight:500,color:'#374151'}}>Foto dipendente (opzionale):</label>
-                <input type="file" accept="image/*" onChange={handleFotoUpload}
-                  style={{fontSize:13,flex:1}}/>
+                <input type="file" accept="image/*" onChange={handleFotoUpload} style={{fontSize:13,flex:1}}/>
                 {fotoUrl && <button className="btn btn-secondary btn-sm" onClick={()=>setFotoUrl(null)}>Rimuovi</button>}
               </div>
-              <p style={{fontSize:12,color:'#9ca3af',marginTop:8}}>
-                Formati accettati: JPG, PNG. La foto apparirà nel badge PDF.
-              </p>
+              <p style={{fontSize:12,color:'#9ca3af',marginTop:8}}>Formati accettati: JPG, PNG.</p>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={()=>setBadgeLav(null)}>Chiudi</button>
@@ -563,10 +551,10 @@ function FormLavoratore({form, f, ruoliList}) {
     <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>
       {ruoliList.map(r=>(
         <div key={r} onClick={()=>toggleRuolo(r)} style={{
-          padding:'6px 12px', borderRadius:20, cursor:'pointer', fontSize:13, fontWeight:500,
-          background: ruoli.includes(r) ? '#0f3460' : '#f1f5f9',
-          color: ruoli.includes(r) ? '#fff' : '#374151',
-          border: `1px solid ${ruoli.includes(r)?'#0f3460':'#e2e8f0'}`,
+          padding:'6px 12px',borderRadius:20,cursor:'pointer',fontSize:13,fontWeight:500,
+          background:ruoli.includes(r)?'#0f3460':'#f1f5f9',
+          color:ruoli.includes(r)?'#fff':'#374151',
+          border:`1px solid ${ruoli.includes(r)?'#0f3460':'#e2e8f0'}`,
           transition:'all 0.15s'
         }}>{r}</div>
       ))}
