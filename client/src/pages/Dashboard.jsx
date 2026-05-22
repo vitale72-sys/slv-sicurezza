@@ -40,8 +40,7 @@ export default function Dashboard() {
     <div className="page">
       <div className="topbar" style={{marginLeft:-24,marginRight:-24,marginTop:-24,marginBottom:24,paddingLeft:24,paddingRight:24}}>
         <span className="topbar-title">Cruscotto generale</span>
-        <span style={{fontSize:12,color:'#6b7280'}}>RSPP: {user?.nome}</span>
-      </div>
+              </div>
 
       <div className="kpi-grid">
         <div className="kpi info">
