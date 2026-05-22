@@ -43,7 +43,7 @@ export default function Aziende() {
   return (
     <div className="page">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:22,flexWrap:'wrap',gap:10}}>
-        <span style={{fontSize:18,fontWeight:700}}>Aziende clienti</span>
+        <span style={{fontSize:18,fontWeight:700}}>Aziende</span>
         {user?.role==='admin' && (
           <button className="btn btn-primary" onClick={()=>{setForm(emptyForm);setShowModal(true)}}>
             + Nuova azienda
