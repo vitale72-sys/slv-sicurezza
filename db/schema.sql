@@ -26,16 +26,24 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS lavoratori (
   id SERIAL PRIMARY KEY,
-   azienda_id INTEGER REFERENCES aziende(id) ON DELETE SET NULL,
-  can_edit BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW(),
+  azienda_id INTEGER REFERENCES aziende(id) ON DELETE CASCADE,
   nome VARCHAR(100) NOT NULL,
   cognome VARCHAR(100) NOT NULL,
+  data_nascita DATE,
+  luogo_nascita VARCHAR(100),
+  codice_fiscale VARCHAR(20),
   mansione VARCHAR(255),
   reparto VARCHAR(100),
+  ruoli_sicurezza TEXT[],
+  fa_turni BOOLEAN DEFAULT FALSE,
+  turno_note TEXT,
+  formazione_pregressa TEXT,
+  telefono VARCHAR(50),
+  email VARCHAR(255),
   data_assunzione DATE,
   attivo BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
+);
 );
 
 CREATE TABLE IF NOT EXISTS formazione (
@@ -105,3 +113,13 @@ CREATE INDEX IF NOT EXISTS idx_nomine_azienda ON nomine(azienda_id);
 CREATE INDEX IF NOT EXISTS idx_attrezzature_azienda ON attrezzature(azienda_id);
 CREATE INDEX IF NOT EXISTS idx_documenti_azienda ON documenti(azienda_id);
 CREATE INDEX IF NOT EXISTS idx_users_azienda ON users(azienda_id);
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS data_nascita DATE;
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS luogo_nascita VARCHAR(100);
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS codice_fiscale VARCHAR(20);
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS ruoli_sicurezza TEXT[];
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS fa_turni BOOLEAN DEFAULT FALSE;
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS turno_note TEXT;
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS formazione_pregressa TEXT;
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS telefono VARCHAR(50);
+ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit BOOLEAN DEFAULT FALSE;
