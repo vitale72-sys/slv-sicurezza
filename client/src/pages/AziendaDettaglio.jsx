@@ -6,12 +6,14 @@ import { useAuth } from '../App.jsx';
 const NOMINE_TIPI = ['RSPP Interno','RSPP Esterno','RLS','Medico Competente','Addetto Antincendio','Addetto Primo Soccorso','ASPP','Preposto','Dirigente'];
 const GIUDIZI = ['Idoneo','Idoneo con prescrizioni','Idoneo con limitazioni','Non idoneo temporaneo','Non idoneo'];
 const DOC_TIPI = ['DVR','POS','DUVRI','Piano di emergenza','Registro infortuni','Valutazione rischio rumore','Valutazione rischio vibr.','Altro'];
+const RUOLI_SICUREZZA = ['Preposto','Addetto Primo Soccorso','Addetto Antincendio (Rischio Basso)','Addetto Antincendio (Rischio Medio)','Addetto Antincendio (Rischio Alto)','ASPP','RLS','Dirigente sicurezza'];
 
 export default function AziendaDettaglio() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
+  const canEdit = isAdmin || user?.can_edit;
 
   const [azienda, setAzienda] = useState(null);
   const [tab, setTab] = useState('lavoratori');
@@ -19,12 +21,53 @@ export default function AziendaDettaglio() {
   const [lavoratori, setLavoratori] = useState([]);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
+  const [badgeLav, setBadgeLav] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const f = (k,v) => setForm(x=>({...x,[k]:v}));
+
+  async function openBadge(lav) {
+    const url = `${window.location.origin}/dipendente/${lav.id}`;
+    try {
+      const QRCode = (await import('qrcode')).default;
+      const qr = await QRCode.toDataURL(url, { width: 180, margin: 1 });
+      setQrDataUrl(qr);
+      setBadgeLav({ ...lav, url });
+    } catch(e) { alert('Errore QR: ' + e.message); }
+  }
+
+  function downloadBadge() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640; canvas.height = 780;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,640,780);
+    ctx.strokeStyle = '#0f3460'; ctx.lineWidth = 6;
+    ctx.strokeRect(3,3,634,774);
+    ctx.fillStyle = '#0f3460'; ctx.fillRect(0,0,640,130);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('SLV SICUREZZA', 320, 48);
+    ctx.font = '17px Arial'; ctx.fillText('Tessera dipendente', 320, 80);
+    ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold 30px Arial';
+    ctx.fillText(`${badgeLav.cognome} ${badgeLav.nome}`, 320, 195);
+    ctx.font = '19px Arial'; ctx.fillStyle = '#6b7280';
+    ctx.fillText(badgeLav.mansione||'', 320, 232);
+    ctx.fillStyle = '#0f3460'; ctx.font = 'bold 17px Arial';
+    ctx.fillText(azienda?.nome||'', 320, 268);
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 230, 295, 180, 180);
+      ctx.fillStyle = '#9ca3af'; ctx.font = '12px Arial';
+      ctx.fillText('Scansiona per verificare attestati e visite', 320, 510);
+      const link = document.createElement('a');
+      link.download = `badge_${badgeLav.cognome}_${badgeLav.nome}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = qrDataUrl;
+  }
 
   useEffect(() => {
     api.getAzienda(id).then(setAzienda).catch(()=>navigate('/aziende'));
-    api.getLavoratori(id).then(l=>setLavoratori(l)).catch(()=>{});
-    loadTab('lavoratori');
+    api.getLavoratori(id).then(l=>{ setLavoratori(l); setData(x=>({...x,lavoratori:l})); }).catch(()=>{});
   }, [id]);
 
   async function loadTab(t) {
@@ -37,8 +80,9 @@ export default function AziendaDettaglio() {
   async function handleSave() {
     try {
       if (tab==='lavoratori') {
-        if (form.id) { const r=await api.updateLavoratore(form.id,form); setData(x=>({...x,lavoratori:x.lavoratori.map(l=>l.id===form.id?r:l)})); setLavoratori(l=>l.map(l=>l.id===form.id?r:l)); }
-        else { const r=await api.createLavoratore({...form,azienda_id:id}); setData(x=>({...x,lavoratori:[...(x.lavoratori||[]),r]})); setLavoratori(l=>[...l,r]); }
+        const payload = { ...form, azienda_id: id };
+        if (form.id) { const r=await api.updateLavoratore(form.id,payload); setData(x=>({...x,lavoratori:x.lavoratori.map(l=>l.id===form.id?r:l)})); setLavoratori(l=>l.map(x=>x.id===form.id?r:x)); }
+        else { const r=await api.createLavoratore(payload); setData(x=>({...x,lavoratori:[...(x.lavoratori||[]),r]})); setLavoratori(l=>[...l,r]); }
       } else if (tab==='formazione') {
         if (form.id) { const r=await api.updateFormazione(form.id,form); setData(x=>({...x,formazione:x.formazione.map(i=>i.id===form.id?r:i)})); }
         else { const r=await api.createFormazione(form); setData(x=>({...x,formazione:[...(x.formazione||[]),r]})); }
@@ -70,18 +114,17 @@ export default function AziendaDettaglio() {
   }
 
   if (!azienda) return <div className="page">Caricamento...</div>;
-
   const rows = data[tab] || [];
 
   return (
     <div className="page">
-      <div className="topbar" style={{marginLeft:-24,marginRight:-24,marginTop:-24,marginBottom:24,paddingLeft:24,paddingRight:24}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
           {isAdmin && <button className="btn btn-secondary btn-sm" onClick={()=>navigate('/aziende')}>← Indietro</button>}
-          <span className="topbar-title">{azienda.nome}</span>
+          <span style={{fontSize:18,fontWeight:700}}>{azienda.nome}</span>
           {azienda.settore && <span className="badge badge-gray">{azienda.settore}</span>}
         </div>
-        <span style={{fontSize:12,color:'#6b7280'}}>{azienda.referente} · {azienda.telefono||azienda.email||''}</span>
+        <span style={{fontSize:13,color:'#6b7280'}}>{azienda.referente} {azienda.telefono?'· '+azienda.telefono:''}</span>
       </div>
 
       <div className="tabs">
@@ -93,7 +136,7 @@ export default function AziendaDettaglio() {
       <div className="card">
         <div className="card-header">
           <span className="card-title" style={{textTransform:'capitalize'}}>{tab}</span>
-          {isAdmin && (
+          {canEdit && (
             <button className="btn btn-primary btn-sm" onClick={()=>{
               const defaults = { formazione:{lavoratore_id:''}, visite:{lavoratore_id:'',giudizio:'Idoneo'}, nomine:{tipo:NOMINE_TIPI[0]}, documenti:{tipo:'DVR'} };
               setForm(defaults[tab]||{});
@@ -101,14 +144,13 @@ export default function AziendaDettaglio() {
             }}>+ Aggiungi</button>
           )}
         </div>
-
         <div className="table-wrap">
-          {tab==='lavoratori' && <TableLavoratori rows={rows} isAdmin={isAdmin} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete} />}
-          {tab==='formazione' && <TableFormazione rows={rows} isAdmin={isAdmin} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete} />}
-          {tab==='visite' && <TableVisite rows={rows} isAdmin={isAdmin} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete} />}
-          {tab==='nomine' && <TableNomine rows={rows} isAdmin={isAdmin} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete} />}
-          {tab==='attrezzature' && <TableAttrezzature rows={rows} isAdmin={isAdmin} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete} />}
-          {tab==='documenti' && <TableDocumenti rows={rows} isAdmin={isAdmin} onDelete={handleDelete} />}
+          {tab==='lavoratori' && <TableLavoratori rows={rows} canEdit={canEdit} onEdit={r=>{setForm({...r,ruoli_sicurezza:r.ruoli_sicurezza||[]});setModal('add');}} onDelete={handleDelete} onBadge={openBadge}/>}
+          {tab==='formazione' && <TableFormazione rows={rows} canEdit={canEdit} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete}/>}
+          {tab==='visite' && <TableVisite rows={rows} canEdit={canEdit} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete}/>}
+          {tab==='nomine' && <TableNomine rows={rows} canEdit={canEdit} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete}/>}
+          {tab==='attrezzature' && <TableAttrezzature rows={rows} canEdit={canEdit} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete}/>}
+          {tab==='documenti' && <TableDocumenti rows={rows} canEdit={canEdit} onDelete={handleDelete}/>}
         </div>
       </div>
 
@@ -116,16 +158,16 @@ export default function AziendaDettaglio() {
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
           <div className="modal">
             <div className="modal-header">
-              <h3>{form.id?'Modifica':'Nuovo'} {tab.replace('_',' ')}</h3>
+              <h3>{form.id?'Modifica':'Nuovo'} {tab}</h3>
               <button className="modal-close" onClick={()=>setModal(null)}>×</button>
             </div>
             <div className="modal-body">
-              {tab==='lavoratori' && <FormLavoratore form={form} f={f} />}
-              {tab==='formazione' && <FormFormazione form={form} f={f} lavoratori={lavoratori} />}
-              {tab==='visite' && <FormVisita form={form} f={f} lavoratori={lavoratori} giudizi={GIUDIZI} />}
-              {tab==='nomine' && <FormNomina form={form} f={f} tipi={NOMINE_TIPI} />}
-              {tab==='attrezzature' && <FormAttrezzatura form={form} f={f} />}
-              {tab==='documenti' && <FormDocumento form={form} f={f} tipi={DOC_TIPI} />}
+              {tab==='lavoratori' && <FormLavoratore form={form} f={f} ruoliList={RUOLI_SICUREZZA}/>}
+              {tab==='formazione' && <FormFormazione form={form} f={f} lavoratori={lavoratori}/>}
+              {tab==='visite' && <FormVisita form={form} f={f} lavoratori={lavoratori} giudizi={GIUDIZI}/>}
+              {tab==='nomine' && <FormNomina form={form} f={f} tipi={NOMINE_TIPI}/>}
+              {tab==='attrezzature' && <FormAttrezzatura form={form} f={f}/>}
+              {tab==='documenti' && <FormDocumento form={form} f={f} tipi={DOC_TIPI}/>}
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={()=>setModal(null)}>Annulla</button>
@@ -134,16 +176,50 @@ export default function AziendaDettaglio() {
           </div>
         </div>
       )}
+
+      {badgeLav && (
+        <div className="modal-overlay" onClick={()=>setBadgeLav(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Badge QR — {badgeLav.cognome} {badgeLav.nome}</h3>
+              <button className="modal-close" onClick={()=>setBadgeLav(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{textAlign:'center'}}>
+              <div className="badge-card" style={{margin:'0 auto'}}>
+                <div className="badge-logo">SLV SICUREZZA</div>
+                <div className="badge-avatar">{badgeLav.nome?.[0]}{badgeLav.cognome?.[0]}</div>
+                <div className="badge-name">{badgeLav.cognome} {badgeLav.nome}</div>
+                <div className="badge-mansione">{badgeLav.mansione||''}</div>
+                <div className="badge-azienda">{azienda?.nome}</div>
+                {badgeLav.ruoli_sicurezza?.length>0 && (
+                  <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:4,justifyContent:'center'}}>
+                    {badgeLav.ruoli_sicurezza.map((r,i)=><span key={i} className="badge badge-info" style={{fontSize:11}}>{r}</span>)}
+                  </div>
+                )}
+                <div className="badge-qr">
+                  {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{width:160,height:160}}/>}
+                </div>
+                <div className="badge-footer">Scansiona per verificare attestati e visite</div>
+              </div>
+              <p style={{fontSize:12,color:'#9ca3af',marginTop:12}}>
+                <a href={badgeLav.url} target="_blank" rel="noreferrer" style={{color:'#0f3460'}}>{badgeLav.url}</a>
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={()=>setBadgeLav(null)}>Chiudi</button>
+              <button className="btn btn-primary" onClick={downloadBadge}>⬇ Scarica PNG</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Tabelle ──────────────────────────────────────────────────
-
-function Actions({row, isAdmin, onEdit, onDelete}) {
-  if (!isAdmin) return null;
+function Actions({row, canEdit, onEdit, onDelete}) {
+  if (!canEdit) return null;
   return (
-    <div style={{display:'flex',gap:6}}>
+    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
       {onEdit && <button className="btn btn-secondary btn-sm" onClick={()=>onEdit(row)}>Modifica</button>}
       <button className="btn btn-danger btn-sm" onClick={()=>onDelete(row.id)}>Elimina</button>
     </div>
@@ -159,91 +235,140 @@ function Scad({data}) {
   return <span className={`badge ${b.cls}`}>{formatDate(data)} · {b.label}</span>;
 }
 
-function TableLavoratori({rows,isAdmin,onEdit,onDelete}) {
-  return <table><thead><tr><th>Cognome e nome</th><th>Mansione</th><th>Reparto</th><th>Assunzione</th><th>Stato</th><th></th></tr></thead>
-    <tbody>{rows.length===0?<EmptyRow cols={6}/>:rows.map(r=><tr key={r.id}>
-      <td style={{fontWeight:500}}>{r.cognome} {r.nome}</td>
-      <td>{r.mansione||'—'}</td><td>{r.reparto||'—'}</td>
-      <td>{formatDate(r.data_assunzione)}</td>
+function TableLavoratori({rows,canEdit,onEdit,onDelete,onBadge}) {
+  return <table><thead><tr><th>Cognome e nome</th><th>Mansione</th><th>Ruoli sicurezza</th><th>C.F.</th><th>Turni</th><th>Stato</th><th></th></tr></thead>
+    <tbody>{rows.length===0?<EmptyRow cols={7}/>:rows.map(r=><tr key={r.id}>
+      <td style={{fontWeight:600}}>{r.cognome} {r.nome}</td>
+      <td>{r.mansione||'—'}</td>
+      <td>{r.ruoli_sicurezza?.length>0?r.ruoli_sicurezza.map((x,i)=><span key={i} className="badge badge-info" style={{marginRight:3,fontSize:11}}>{x}</span>):'—'}</td>
+      <td style={{fontSize:13}}>{r.codice_fiscale||'—'}</td>
+      <td><span className={`badge ${r.fa_turni?'badge-warning':'badge-gray'}`}>{r.fa_turni?'Sì':'No'}</span></td>
       <td><span className={`badge ${r.attivo?'badge-ok':'badge-gray'}`}>{r.attivo?'Attivo':'Non attivo'}</span></td>
-      <td><Actions row={r} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete}/></td>
+      <td>
+        <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+          <Actions row={r} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete}/>
+          <button className="btn btn-success btn-sm" onClick={()=>onBadge(r)}>QR Badge</button>
+        </div>
+      </td>
     </tr>)}</tbody></table>;
 }
 
-function TableFormazione({rows,isAdmin,onEdit,onDelete}) {
+function TableFormazione({rows,canEdit,onEdit,onDelete}) {
   return <table><thead><tr><th>Lavoratore</th><th>Corso</th><th>Ente</th><th>Ore</th><th>Completato</th><th>Scadenza</th><th></th></tr></thead>
     <tbody>{rows.length===0?<EmptyRow cols={7}/>:rows.map(r=><tr key={r.id}>
-      <td style={{fontWeight:500}}>{r.cognome} {r.nome}</td>
+      <td style={{fontWeight:600}}>{r.cognome} {r.nome}</td>
       <td>{r.tipo_corso}</td><td>{r.ente_formatore||'—'}</td><td>{r.ore_corso||'—'}</td>
       <td>{formatDate(r.data_completamento)}</td>
       <td>{r.scadenza?<Scad data={r.scadenza}/>:'—'}</td>
-      <td><Actions row={r} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete}/></td>
+      <td><Actions row={r} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete}/></td>
     </tr>)}</tbody></table>;
 }
 
-function TableVisite({rows,isAdmin,onEdit,onDelete}) {
+function TableVisite({rows,canEdit,onEdit,onDelete}) {
   return <table><thead><tr><th>Lavoratore</th><th>Medico</th><th>Data visita</th><th>Giudizio</th><th>Scadenza</th><th></th></tr></thead>
     <tbody>{rows.length===0?<EmptyRow cols={6}/>:rows.map(r=><tr key={r.id}>
-      <td style={{fontWeight:500}}>{r.cognome} {r.nome}</td>
+      <td style={{fontWeight:600}}>{r.cognome} {r.nome}</td>
       <td>{r.medico_competente||'—'}</td>
       <td>{formatDate(r.data_visita)}</td>
       <td><span className="badge badge-info">{r.giudizio}</span></td>
       <td><Scad data={r.scadenza}/></td>
-      <td><Actions row={r} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete}/></td>
+      <td><Actions row={r} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete}/></td>
     </tr>)}</tbody></table>;
 }
 
-function TableNomine({rows,isAdmin,onEdit,onDelete}) {
+function TableNomine({rows,canEdit,onEdit,onDelete}) {
   return <table><thead><tr><th>Tipo nomina</th><th>Nominato</th><th>Data nomina</th><th>Scadenza</th><th></th></tr></thead>
     <tbody>{rows.length===0?<EmptyRow cols={5}/>:rows.map(r=><tr key={r.id}>
       <td><span className="badge badge-info">{r.tipo}</span></td>
-      <td style={{fontWeight:500}}>{r.nominato}</td>
+      <td style={{fontWeight:600}}>{r.nominato}</td>
       <td>{formatDate(r.data_nomina)}</td>
       <td>{r.scadenza?<Scad data={r.scadenza}/>:'Senza scadenza'}</td>
-      <td><Actions row={r} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete}/></td>
+      <td><Actions row={r} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete}/></td>
     </tr>)}</tbody></table>;
 }
 
-function TableAttrezzature({rows,isAdmin,onEdit,onDelete}) {
+function TableAttrezzature({rows,canEdit,onEdit,onDelete}) {
   return <table><thead><tr><th>Attrezzatura</th><th>Marca/modello</th><th>Matricola</th><th>Ultima verifica</th><th>Prossima verifica</th><th></th></tr></thead>
     <tbody>{rows.length===0?<EmptyRow cols={6}/>:rows.map(r=><tr key={r.id}>
-      <td style={{fontWeight:500}}>{r.nome}</td>
+      <td style={{fontWeight:600}}>{r.nome}</td>
       <td>{r.marca_modello||'—'}</td><td>{r.matricola||'—'}</td>
       <td>{formatDate(r.ultima_verifica)}</td>
       <td>{r.prossima_verifica?<Scad data={r.prossima_verifica}/>:'—'}</td>
-      <td><Actions row={r} isAdmin={isAdmin} onEdit={onEdit} onDelete={onDelete}/></td>
+      <td><Actions row={r} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete}/></td>
     </tr>)}</tbody></table>;
 }
 
-function TableDocumenti({rows,isAdmin,onDelete}) {
+function TableDocumenti({rows,canEdit,onDelete}) {
   return <table><thead><tr><th>Documento</th><th>Tipo</th><th>Caricato il</th><th>Scadenza</th><th>Link</th><th></th></tr></thead>
     <tbody>{rows.length===0?<EmptyRow cols={6}/>:rows.map(r=><tr key={r.id}>
-      <td style={{fontWeight:500}}>{r.nome}</td>
+      <td style={{fontWeight:600}}>{r.nome}</td>
       <td><span className="badge badge-gray">{r.tipo}</span></td>
       <td>{formatDate(r.data_upload)}</td>
       <td>{r.scadenza?<Scad data={r.scadenza}/>:'—'}</td>
-      <td>{r.url?<a href={r.url} target="_blank" rel="noreferrer" style={{color:'#0f3460',fontSize:12}}>Apri →</a>:'—'}</td>
-      <td>{isAdmin&&<button className="btn btn-danger btn-sm" onClick={()=>onDelete(r.id)}>Elimina</button>}</td>
+      <td>{r.url?<a href={r.url} target="_blank" rel="noreferrer" style={{color:'#0f3460',fontSize:13}}>Apri →</a>:'—'}</td>
+      <td>{canEdit&&<button className="btn btn-danger btn-sm" onClick={()=>onDelete(r.id)}>Elimina</button>}</td>
     </tr>)}</tbody></table>;
 }
 
-// ─── Form ─────────────────────────────────────────────────────
-
-function FormLavoratore({form,f}) {
+function FormLavoratore({form, f, ruoliList}) {
+  const ruoli = form.ruoli_sicurezza || [];
+  function toggleRuolo(r) {
+    const nuovi = ruoli.includes(r) ? ruoli.filter(x=>x!==r) : [...ruoli, r];
+    f('ruoli_sicurezza', nuovi);
+  }
   return <>
+    <div style={{fontWeight:600,fontSize:14,marginBottom:12,color:'#0f3460'}}>Dati anagrafici</div>
     <div className="form-grid">
       <div className="form-group"><label className="form-label">Nome *</label><input className="form-input" value={form.nome||''} onChange={e=>f('nome',e.target.value)}/></div>
       <div className="form-group"><label className="form-label">Cognome *</label><input className="form-input" value={form.cognome||''} onChange={e=>f('cognome',e.target.value)}/></div>
     </div>
     <div className="form-grid">
+      <div className="form-group"><label className="form-label">Data di nascita</label><input className="form-input" type="date" value={form.data_nascita?.split('T')[0]||''} onChange={e=>f('data_nascita',e.target.value)}/></div>
+      <div className="form-group"><label className="form-label">Luogo di nascita</label><input className="form-input" value={form.luogo_nascita||''} onChange={e=>f('luogo_nascita',e.target.value)}/></div>
+    </div>
+    <div className="form-group"><label className="form-label">Codice fiscale</label><input className="form-input" value={form.codice_fiscale||''} onChange={e=>f('codice_fiscale',e.target.value.toUpperCase())} style={{textTransform:'uppercase'}}/></div>
+    <div className="form-grid">
+      <div className="form-group"><label className="form-label">Telefono</label><input className="form-input" value={form.telefono||''} onChange={e=>f('telefono',e.target.value)}/></div>
+      <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email||''} onChange={e=>f('email',e.target.value)}/></div>
+    </div>
+
+    <div style={{fontWeight:600,fontSize:14,margin:'16px 0 12px',color:'#0f3460'}}>Dati lavorativi</div>
+    <div className="form-grid">
       <div className="form-group"><label className="form-label">Mansione</label><input className="form-input" value={form.mansione||''} onChange={e=>f('mansione',e.target.value)}/></div>
       <div className="form-group"><label className="form-label">Reparto</label><input className="form-input" value={form.reparto||''} onChange={e=>f('reparto',e.target.value)}/></div>
     </div>
     <div className="form-group"><label className="form-label">Data assunzione</label><input className="form-input" type="date" value={form.data_assunzione?.split('T')[0]||''} onChange={e=>f('data_assunzione',e.target.value)}/></div>
-    <div className="form-group"><label className="form-label">Stato</label>
-      <select className="form-input" value={form.attivo===false?'false':'true'} onChange={e=>f('attivo',e.target.value==='true')}>
-        <option value="true">Attivo</option><option value="false">Non attivo</option>
-      </select>
+    <div className="form-grid">
+      <div className="form-group"><label className="form-label">Fa i turni?</label>
+        <select className="form-input" value={form.fa_turni?'true':'false'} onChange={e=>f('fa_turni',e.target.value==='true')}>
+          <option value="false">No</option><option value="true">Sì</option>
+        </select>
+      </div>
+      <div className="form-group"><label className="form-label">Stato</label>
+        <select className="form-input" value={form.attivo===false?'false':'true'} onChange={e=>f('attivo',e.target.value==='true')}>
+          <option value="true">Attivo</option><option value="false">Non attivo</option>
+        </select>
+      </div>
+    </div>
+    {form.fa_turni && <div className="form-group"><label className="form-label">Note turni</label><input className="form-input" value={form.turno_note||''} onChange={e=>f('turno_note',e.target.value)} placeholder="es. Mattina/Pomeriggio/Notte"/></div>}
+
+    <div style={{fontWeight:600,fontSize:14,margin:'16px 0 12px',color:'#0f3460'}}>Ruoli sicurezza</div>
+    <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>
+      {ruoliList.map(r=>(
+        <div key={r} onClick={()=>toggleRuolo(r)} style={{
+          padding:'6px 12px', borderRadius:20, cursor:'pointer', fontSize:13, fontWeight:500,
+          background: ruoli.includes(r) ? '#0f3460' : '#f1f5f9',
+          color: ruoli.includes(r) ? '#fff' : '#374151',
+          border: `1px solid ${ruoli.includes(r)?'#0f3460':'#e2e8f0'}`,
+          transition:'all 0.15s'
+        }}>{r}</div>
+      ))}
+    </div>
+
+    <div style={{fontWeight:600,fontSize:14,margin:'16px 0 12px',color:'#0f3460'}}>Formazione pregressa</div>
+    <div className="form-group">
+      <label className="form-label">Corsi già in possesso al momento dell'assunzione</label>
+      <textarea className="form-input" rows="3" value={form.formazione_pregressa||''} onChange={e=>f('formazione_pregressa',e.target.value)} placeholder="es. Formazione generale 4h (2020), Primo soccorso (2022)..."/>
     </div>
   </>;
 }
@@ -298,7 +423,7 @@ function FormNomina({form,f,tipi}) {
         {tipi.map(t=><option key={t} value={t}>{t}</option>)}
       </select>
     </div>
-    <div className="form-group"><label className="form-label">Nominato *</label><input className="form-input" value={form.nominato||''} onChange={e=>f('nominato',e.target.value)} placeholder="Nome e cognome o ragione sociale"/></div>
+    <div className="form-group"><label className="form-label">Nominato *</label><input className="form-input" value={form.nominato||''} onChange={e=>f('nominato',e.target.value)}/></div>
     <div className="form-grid">
       <div className="form-group"><label className="form-label">Data nomina *</label><input className="form-input" type="date" value={form.data_nomina?.split('T')[0]||''} onChange={e=>f('data_nomina',e.target.value)}/></div>
       <div className="form-group"><label className="form-label">Scadenza (opz.)</label><input className="form-input" type="date" value={form.scadenza?.split('T')[0]||''} onChange={e=>f('scadenza',e.target.value)}/></div>
@@ -312,7 +437,7 @@ function FormAttrezzatura({form,f}) {
     <div className="form-group"><label className="form-label">Nome attrezzatura *</label><input className="form-input" value={form.nome||''} onChange={e=>f('nome',e.target.value)}/></div>
     <div className="form-grid">
       <div className="form-group"><label className="form-label">Marca/modello</label><input className="form-input" value={form.marca_modello||''} onChange={e=>f('marca_modello',e.target.value)}/></div>
-      <div className="form-group"><label className="form-label">Matricola/n. serie</label><input className="form-input" value={form.matricola||''} onChange={e=>f('matricola',e.target.value)}/></div>
+      <div className="form-group"><label className="form-label">Matricola</label><input className="form-input" value={form.matricola||''} onChange={e=>f('matricola',e.target.value)}/></div>
     </div>
     <div className="form-group"><label className="form-label">Tipo verifica</label><input className="form-input" value={form.tipo_verifica||''} onChange={e=>f('tipo_verifica',e.target.value)} placeholder="es. Verifica INAIL, Manutenzione periodica"/></div>
     <div className="form-grid">
