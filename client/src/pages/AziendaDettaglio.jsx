@@ -23,46 +23,206 @@ export default function AziendaDettaglio() {
   const [form, setForm] = useState({});
   const [badgeLav, setBadgeLav] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [fotoUrl, setFotoUrl] = useState(null);
   const f = (k,v) => setForm(x=>({...x,[k]:v}));
 
   async function openBadge(lav) {
     const url = `${window.location.origin}/dipendente/${lav.id}`;
     try {
       const QRCode = (await import('qrcode')).default;
-      const qr = await QRCode.toDataURL(url, { width: 180, margin: 1 });
+      const qr = await QRCode.toDataURL(url, { width: 160, margin: 1 });
       setQrDataUrl(qr);
+      setFotoUrl(null);
       setBadgeLav({ ...lav, url });
     } catch(e) { alert('Errore QR: ' + e.message); }
   }
 
-  function downloadBadge() {
+  function handleFotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setFotoUrl(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  function downloadBadgePDF() {
+    // Badge formato tessera: 85.6mm x 53.98mm
+    // A 96dpi * 3 = 288dpi per qualità stampa
+    const W = 969, H = 612; // 85.6 x 54 mm a 288dpi
     const canvas = document.createElement('canvas');
-    canvas.width = 640; canvas.height = 780;
+    canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,640,780);
-    ctx.strokeStyle = '#0f3460'; ctx.lineWidth = 6;
-    ctx.strokeRect(3,3,634,774);
-    ctx.fillStyle = '#0f3460'; ctx.fillRect(0,0,640,130);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('SLV SICUREZZA', 320, 48);
-    ctx.font = '17px Arial'; ctx.fillText('Tessera dipendente', 320, 80);
-    ctx.fillStyle = '#1a1a2e'; ctx.font = 'bold 30px Arial';
-    ctx.fillText(`${badgeLav.cognome} ${badgeLav.nome}`, 320, 195);
-    ctx.font = '19px Arial'; ctx.fillStyle = '#6b7280';
-    ctx.fillText(badgeLav.mansione||'', 320, 232);
-    ctx.fillStyle = '#0f3460'; ctx.font = 'bold 17px Arial';
-    ctx.fillText(azienda?.nome||'', 320, 268);
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 230, 295, 180, 180);
-      ctx.fillStyle = '#9ca3af'; ctx.font = '12px Arial';
-      ctx.fillText('Scansiona per verificare attestati e visite', 320, 510);
+
+    // Sfondo bianco
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Bordo
+    ctx.strokeStyle = '#0f3460';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, W-4, H-4);
+
+    // Banda sinistra blu
+    ctx.fillStyle = '#0f3460';
+    ctx.fillRect(0, 0, 240, H);
+
+    // Spazio foto nella banda sinistra
+    if (fotoUrl) {
+      const img = new Image();
+      img.src = fotoUrl;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(120, 180, 90, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(img, 30, 90, 180, 180);
+      ctx.restore();
+    } else {
+      // Placeholder foto
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(120, 180, 90, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = 'bold 72px Arial';
+      ctx.textAlign = 'center';
+      const iniziali = `${badgeLav.nome?.[0]||''}${badgeLav.cognome?.[0]||''}`.toUpperCase();
+      ctx.fillText(iniziali, 120, 205);
+    }
+
+    // Nome azienda in fondo alla banda
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    // Tronca nome azienda se lungo
+    const nomeAz = azienda?.nome || '';
+    ctx.fillText(nomeAz.length > 22 ? nomeAz.slice(0,20)+'...' : nomeAz, 120, 380);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '14px Arial';
+    ctx.fillText(azienda?.settore || '', 120, 405);
+
+    // ─── Contenuto principale (parte destra) ───
+    const X = 265; // inizio area destra
+
+    // Nome e cognome
+    ctx.fillStyle = '#0f3460';
+    ctx.font = 'bold 36px Arial';
+    ctx.textAlign = 'left';
+    const nomeCompleto = `${badgeLav.cognome.toUpperCase()} ${badgeLav.nome}`;
+    ctx.fillText(nomeCompleto, X, 70);
+
+    // Linea separatrice
+    ctx.strokeStyle = '#e8ecf4';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(X, 85);
+    ctx.lineTo(W-20, 85);
+    ctx.stroke();
+
+    // Mansione
+    ctx.fillStyle = '#374151';
+    ctx.font = '24px Arial';
+    ctx.fillText(badgeLav.mansione || '', X, 120);
+
+    // Data assunzione
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '18px Arial';
+    if (badgeLav.data_assunzione) {
+      ctx.fillText(`Assunto il: ${new Date(badgeLav.data_assunzione).toLocaleDateString('it-IT')}`, X, 155);
+    }
+
+    // Codice fiscale
+    if (badgeLav.codice_fiscale) {
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '16px Arial';
+      ctx.fillText(`C.F.: ${badgeLav.codice_fiscale}`, X, 185);
+    }
+
+    // Ruoli sicurezza
+    if (badgeLav.ruoli_sicurezza?.length > 0) {
+      ctx.fillStyle = '#374151';
+      ctx.font = 'bold 15px Arial';
+      ctx.fillText('Ruoli:', X, 225);
+      let rx = X + 55;
+      badgeLav.ruoli_sicurezza.slice(0,3).forEach(r => {
+        const rShort = r.replace('Addetto ', '').replace('(Rischio ', '(');
+        ctx.fillStyle = '#0f3460';
+        ctx.font = 'bold 13px Arial';
+        const w = ctx.measureText(rShort).width + 16;
+        ctx.fillStyle = '#dbeafe';
+        ctx.beginPath();
+        ctx.roundRect(rx, 210, w, 22, 4);
+        ctx.fill();
+        ctx.fillStyle = '#1e40af';
+        ctx.font = '12px Arial';
+        ctx.fillText(rShort, rx+8, 225);
+        rx += w + 8;
+      });
+    }
+
+    // Separatore
+    ctx.strokeStyle = '#e8ecf4';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X, 260);
+    ctx.lineTo(W-20, 260);
+    ctx.stroke();
+
+    // QR code + testo
+    const renderFinal = () => {
+      if (qrDataUrl) {
+        const qrImg = new Image();
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, X, 275, 150, 150);
+
+          // Info accanto al QR
+          ctx.fillStyle = '#374151';
+          ctx.font = 'bold 15px Arial';
+          ctx.fillText('Verifica attestati e visite:', X+165, 310);
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '13px Arial';
+          // Spezza URL su più righe se lungo
+          ctx.fillText('Scansiona il QR code', X+165, 335);
+          ctx.fillText('con il tuo smartphone', X+165, 355);
+
+          // Footer
+          ctx.fillStyle = '#9ca3af';
+          ctx.font = '14px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(`SLV Sicurezza · Salvatore Vitale · geometra`, W/2+60, H-18);
+
+          // Converti in PDF
+          savePDF(canvas, W, H);
+        };
+        qrImg.src = qrDataUrl;
+      } else {
+        savePDF(canvas, W, H);
+      }
+    };
+
+    renderFinal();
+  }
+
+  function savePDF(canvas, W, H) {
+    // Crea PDF con jsPDF embedded via script
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = () => {
+      const { jsPDF } = window.jspdf;
+      // 85.6 x 54 mm formato tessera
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
+      const imgData = canvas.toDataURL('image/png');
+      doc.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
+      doc.save(`badge_${badgeLav.cognome}_${badgeLav.nome}.pdf`);
+    };
+    script.onerror = () => {
+      // Fallback PNG se jsPDF non carica
       const link = document.createElement('a');
       link.download = `badge_${badgeLav.cognome}_${badgeLav.nome}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     };
-    img.src = qrDataUrl;
+    document.head.appendChild(script);
   }
 
   useEffect(() => {
@@ -154,6 +314,7 @@ export default function AziendaDettaglio() {
         </div>
       </div>
 
+      {/* Modal aggiungi/modifica */}
       {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
           <div className="modal">
@@ -177,37 +338,85 @@ export default function AziendaDettaglio() {
         </div>
       )}
 
+      {/* Modal Badge QR */}
       {badgeLav && (
         <div className="modal-overlay" onClick={()=>setBadgeLav(null)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
+          <div className="modal" style={{maxWidth:680}} onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Badge QR — {badgeLav.cognome} {badgeLav.nome}</h3>
+              <h3>Badge — {badgeLav.cognome} {badgeLav.nome}</h3>
               <button className="modal-close" onClick={()=>setBadgeLav(null)}>×</button>
             </div>
-            <div className="modal-body" style={{textAlign:'center'}}>
-              <div className="badge-card" style={{margin:'0 auto'}}>
-                <div className="badge-logo">SLV SICUREZZA</div>
-                <div className="badge-avatar">{badgeLav.nome?.[0]}{badgeLav.cognome?.[0]}</div>
-                <div className="badge-name">{badgeLav.cognome} {badgeLav.nome}</div>
-                <div className="badge-mansione">{badgeLav.mansione||''}</div>
-                <div className="badge-azienda">{azienda?.nome}</div>
-                {badgeLav.ruoli_sicurezza?.length>0 && (
-                  <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:4,justifyContent:'center'}}>
-                    {badgeLav.ruoli_sicurezza.map((r,i)=><span key={i} className="badge badge-info" style={{fontSize:11}}>{r}</span>)}
+            <div className="modal-body">
+
+              {/* Anteprima badge orizzontale */}
+              <div style={{
+                width:'100%', maxWidth:500, margin:'0 auto',
+                background:'#fff', border:'3px solid #0f3460', borderRadius:12,
+                display:'flex', overflow:'hidden', minHeight:160
+              }}>
+                {/* Colonna sinistra */}
+                <div style={{
+                  width:140, background:'#0f3460', display:'flex',
+                  flexDirection:'column', alignItems:'center', justifyContent:'center',
+                  padding:'16px 8px', gap:8, flexShrink:0
+                }}>
+                  {fotoUrl ? (
+                    <img src={fotoUrl} alt="foto" style={{width:80,height:80,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,255,255,0.3)'}}/>
+                  ) : (
+                    <div style={{width:80,height:80,borderRadius:'50%',background:'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:'#fff'}}>
+                      {badgeLav.nome?.[0]}{badgeLav.cognome?.[0]}
+                    </div>
+                  )}
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.9)',fontWeight:700,textAlign:'center',wordBreak:'break-word'}}>
+                    {azienda?.nome}
                   </div>
-                )}
-                <div className="badge-qr">
-                  {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{width:160,height:160}}/>}
+                  {azienda?.settore && <div style={{fontSize:10,color:'rgba(255,255,255,0.55)',textAlign:'center'}}>{azienda.settore}</div>}
                 </div>
-                <div className="badge-footer">Scansiona per verificare attestati e visite</div>
+
+                {/* Colonna destra */}
+                <div style={{flex:1, padding:'14px 16px', display:'flex', flexDirection:'column', justifyContent:'space-between'}}>
+                  <div>
+                    <div style={{fontSize:18,fontWeight:700,color:'#0f3460'}}>{badgeLav.cognome.toUpperCase()} {badgeLav.nome}</div>
+                    <div style={{fontSize:13,color:'#374151',marginTop:2}}>{badgeLav.mansione||''}</div>
+                    {badgeLav.data_assunzione && (
+                      <div style={{fontSize:12,color:'#6b7280',marginTop:3}}>
+                        Assunto il: {new Date(badgeLav.data_assunzione).toLocaleDateString('it-IT')}
+                      </div>
+                    )}
+                    {badgeLav.codice_fiscale && (
+                      <div style={{fontSize:11,color:'#9ca3af',marginTop:2}}>C.F.: {badgeLav.codice_fiscale}</div>
+                    )}
+                    {badgeLav.ruoli_sicurezza?.length>0 && (
+                      <div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:6}}>
+                        {badgeLav.ruoli_sicurezza.slice(0,3).map((r,i)=>(
+                          <span key={i} style={{fontSize:10,background:'#dbeafe',color:'#1e40af',padding:'2px 7px',borderRadius:10,fontWeight:500}}>
+                            {r.replace('Addetto ','').replace('(Rischio ','(')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginTop:10}}>
+                    <div style={{fontSize:10,color:'#9ca3af'}}>SLV Sicurezza · Salvatore Vitale</div>
+                    {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{width:56,height:56}}/>}
+                  </div>
+                </div>
               </div>
-              <p style={{fontSize:12,color:'#9ca3af',marginTop:12}}>
-                <a href={badgeLav.url} target="_blank" rel="noreferrer" style={{color:'#0f3460'}}>{badgeLav.url}</a>
+
+              {/* Carica foto */}
+              <div style={{marginTop:16,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                <label style={{fontSize:13,fontWeight:500,color:'#374151'}}>Foto dipendente (opzionale):</label>
+                <input type="file" accept="image/*" onChange={handleFotoUpload}
+                  style={{fontSize:13,flex:1}}/>
+                {fotoUrl && <button className="btn btn-secondary btn-sm" onClick={()=>setFotoUrl(null)}>Rimuovi</button>}
+              </div>
+              <p style={{fontSize:12,color:'#9ca3af',marginTop:8}}>
+                Formati accettati: JPG, PNG. La foto apparirà nel badge PDF.
               </p>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={()=>setBadgeLav(null)}>Chiudi</button>
-              <button className="btn btn-primary" onClick={downloadBadge}>⬇ Scarica PNG</button>
+              <button className="btn btn-primary" onClick={downloadBadgePDF}>⬇ Scarica PDF</button>
             </div>
           </div>
         </div>
@@ -240,7 +449,7 @@ function TableLavoratori({rows,canEdit,onEdit,onDelete,onBadge}) {
     <tbody>{rows.length===0?<EmptyRow cols={7}/>:rows.map(r=><tr key={r.id}>
       <td style={{fontWeight:600}}>{r.cognome} {r.nome}</td>
       <td>{r.mansione||'—'}</td>
-      <td>{r.ruoli_sicurezza?.length>0?r.ruoli_sicurezza.map((x,i)=><span key={i} className="badge badge-info" style={{marginRight:3,fontSize:11}}>{x}</span>):'—'}</td>
+      <td>{r.ruoli_sicurezza?.length>0?r.ruoli_sicurezza.map((x,i)=><span key={i} className="badge badge-info" style={{marginRight:3,fontSize:11}}>{x.replace('Addetto ','')}</span>):'—'}</td>
       <td style={{fontSize:13}}>{r.codice_fiscale||'—'}</td>
       <td><span className={`badge ${r.fa_turni?'badge-warning':'badge-gray'}`}>{r.fa_turni?'Sì':'No'}</span></td>
       <td><span className={`badge ${r.attivo?'badge-ok':'badge-gray'}`}>{r.attivo?'Attivo':'Non attivo'}</span></td>
@@ -331,7 +540,6 @@ function FormLavoratore({form, f, ruoliList}) {
       <div className="form-group"><label className="form-label">Telefono</label><input className="form-input" value={form.telefono||''} onChange={e=>f('telefono',e.target.value)}/></div>
       <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email||''} onChange={e=>f('email',e.target.value)}/></div>
     </div>
-
     <div style={{fontWeight:600,fontSize:14,margin:'16px 0 12px',color:'#0f3460'}}>Dati lavorativi</div>
     <div className="form-grid">
       <div className="form-group"><label className="form-label">Mansione</label><input className="form-input" value={form.mansione||''} onChange={e=>f('mansione',e.target.value)}/></div>
@@ -351,7 +559,6 @@ function FormLavoratore({form, f, ruoliList}) {
       </div>
     </div>
     {form.fa_turni && <div className="form-group"><label className="form-label">Note turni</label><input className="form-input" value={form.turno_note||''} onChange={e=>f('turno_note',e.target.value)} placeholder="es. Mattina/Pomeriggio/Notte"/></div>}
-
     <div style={{fontWeight:600,fontSize:14,margin:'16px 0 12px',color:'#0f3460'}}>Ruoli sicurezza</div>
     <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>
       {ruoliList.map(r=>(
@@ -364,7 +571,6 @@ function FormLavoratore({form, f, ruoliList}) {
         }}>{r}</div>
       ))}
     </div>
-
     <div style={{fontWeight:600,fontSize:14,margin:'16px 0 12px',color:'#0f3460'}}>Formazione pregressa</div>
     <div className="form-group">
       <label className="form-label">Corsi già in possesso al momento dell'assunzione</label>
@@ -439,7 +645,7 @@ function FormAttrezzatura({form,f}) {
       <div className="form-group"><label className="form-label">Marca/modello</label><input className="form-input" value={form.marca_modello||''} onChange={e=>f('marca_modello',e.target.value)}/></div>
       <div className="form-group"><label className="form-label">Matricola</label><input className="form-input" value={form.matricola||''} onChange={e=>f('matricola',e.target.value)}/></div>
     </div>
-    <div className="form-group"><label className="form-label">Tipo verifica</label><input className="form-input" value={form.tipo_verifica||''} onChange={e=>f('tipo_verifica',e.target.value)} placeholder="es. Verifica INAIL, Manutenzione periodica"/></div>
+    <div className="form-group"><label className="form-label">Tipo verifica</label><input className="form-input" value={form.tipo_verifica||''} onChange={e=>f('tipo_verifica',e.target.value)} placeholder="es. Verifica INAIL"/></div>
     <div className="form-grid">
       <div className="form-group"><label className="form-label">Ultima verifica</label><input className="form-input" type="date" value={form.ultima_verifica?.split('T')[0]||''} onChange={e=>f('ultima_verifica',e.target.value)}/></div>
       <div className="form-group"><label className="form-label">Prossima verifica</label><input className="form-input" type="date" value={form.prossima_verifica?.split('T')[0]||''} onChange={e=>f('prossima_verifica',e.target.value)}/></div>
@@ -456,7 +662,7 @@ function FormDocumento({form,f,tipi}) {
         {tipi.map(t=><option key={t} value={t}>{t}</option>)}
       </select>
     </div>
-    <div className="form-group"><label className="form-label">URL / link documento (opz.)</label><input className="form-input" type="url" value={form.url||''} onChange={e=>f('url',e.target.value)} placeholder="https://drive.google.com/..."/></div>
+    <div className="form-group"><label className="form-label">URL documento (opz.)</label><input className="form-input" type="url" value={form.url||''} onChange={e=>f('url',e.target.value)} placeholder="https://drive.google.com/..."/></div>
     <div className="form-group"><label className="form-label">Scadenza (opz.)</label><input className="form-input" type="date" value={form.scadenza?.split('T')[0]||''} onChange={e=>f('scadenza',e.target.value)}/></div>
     <div className="form-group"><label className="form-label">Note</label><textarea className="form-input" rows="2" value={form.note||''} onChange={e=>f('note',e.target.value)}/></div>
   </>;
