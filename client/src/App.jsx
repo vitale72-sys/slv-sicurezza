@@ -5,13 +5,12 @@ import Dashboard from './pages/Dashboard.jsx';
 import Aziende from './pages/Aziende.jsx';
 import AziendaDettaglio from './pages/AziendaDettaglio.jsx';
 import Utenti from './pages/Utenti.jsx';
+import Calendario from './pages/Calendario.jsx';
+import SchedaDipendente from './pages/SchedaDipendente.jsx';
 import Layout from './components/Layout.jsx';
 
 export const AuthContext = createContext(null);
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth() { return useContext(AuthContext); }
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -19,9 +18,7 @@ export default function App() {
 
   useEffect(() => {
     const stored = localStorage.getItem('slv_user');
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch {}
-    }
+    if (stored) { try { setUser(JSON.parse(stored)); } catch {} }
     setLoading(false);
   }, []);
 
@@ -37,19 +34,27 @@ export default function App() {
     setUser(null);
   }
 
-  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>Caricamento...</div>;
+  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',fontSize:16}}>Caricamento...</div>;
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       <BrowserRouter>
         <Routes>
+          {/* Pagina pubblica — accessibile senza login, per QR code */}
+          <Route path="/dipendente/:id" element={<SchedaDipendente />} />
+
+          {/* Login */}
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+
+          {/* Area protetta */}
           <Route element={user ? <Layout /> : <Navigate to="/login" />}>
             <Route index element={<Dashboard />} />
             <Route path="aziende" element={<Aziende />} />
             <Route path="aziende/:id" element={<AziendaDettaglio />} />
+            <Route path="calendario" element={<Calendario />} />
             <Route path="utenti" element={<Utenti />} />
           </Route>
+
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
