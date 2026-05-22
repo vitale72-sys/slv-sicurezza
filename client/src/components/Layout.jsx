@@ -28,7 +28,7 @@ export default function Layout() {
             {icons.dashboard} Dashboard
           </NavLink>
           <NavLink to="/aziende" className={({isActive}) => `nav-item${isActive?' active':''}`}>
-            {icons.aziende} Aziende clienti
+            {icons.aziende} Aziende
           </NavLink>
           {user?.role === 'admin' && (
             <NavLink to="/utenti" className={({isActive}) => `nav-item${isActive?' active':''}`}>
