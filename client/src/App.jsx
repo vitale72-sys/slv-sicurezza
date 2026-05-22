@@ -40,7 +40,7 @@ export default function App() {
     <AuthContext.Provider value={{ user, login, logout }}>
       <BrowserRouter>
         <Routes>
-          {/* Pagina pubblica — accessibile senza login, per QR code */}
+          {/* Pagina pubblica QR code */}
           <Route path="/dipendente/:id" element={<SchedaDipendente />} />
 
           {/* Login */}
