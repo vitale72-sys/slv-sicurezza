@@ -60,7 +60,7 @@ export default function Layout() {
             </button>
             <span className="topbar-title">SLV Sicurezza</span>
           </div>
-          <span style={{fontSize:13,color:'#6b7280'}}>{user?.nome}</span>
+          <span style={{fontSize:13,color:'#6b7280'}}>www.slvsicurezza.it</span>
         </div>
         <Outlet />
       </div>
