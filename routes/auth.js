@@ -5,7 +5,6 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 
-// Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email e password richiesti' });
@@ -33,7 +32,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Crea utente cliente (solo admin)
 router.post('/users', authMiddleware, adminOnly, async (req, res) => {
   const { email, password, nome, azienda_id, can_edit } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email e password richiesti' });
@@ -51,7 +49,6 @@ router.post('/users', authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Aggiorna utente (solo admin)
 router.put('/users/:id', authMiddleware, adminOnly, async (req, res) => {
   const { can_edit, nome, azienda_id } = req.body;
   try {
@@ -66,7 +63,6 @@ router.put('/users/:id', authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Lista utenti (solo admin)
 router.get('/users', authMiddleware, adminOnly, async (req, res) => {
   try {
     const result = await pool.query(
@@ -78,7 +74,6 @@ router.get('/users', authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Elimina utente (solo admin)
 router.delete('/users/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1 AND role != $2', [req.params.id, 'admin']);
@@ -88,7 +83,6 @@ router.delete('/users/:id', authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Inizializzazione admin (una sola volta)
 router.post('/init', async (req, res) => {
   try {
     const existing = await pool.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
@@ -102,6 +96,26 @@ router.post('/init', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
+router.post('/migrate', async (req, res) => {
+  try {
+    await pool.query(`
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS data_nascita DATE;
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS luogo_nascita VARCHAR(100);
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS codice_fiscale VARCHAR(20);
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS ruoli_sicurezza TEXT[];
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS fa_turni BOOLEAN DEFAULT FALSE;
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS turno_note TEXT;
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS formazione_pregressa TEXT;
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS telefono VARCHAR(50);
+      ALTER TABLE lavoratori ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit BOOLEAN DEFAULT FALSE;
+    `);
+    res.json({ message: 'Migrazione completata' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
