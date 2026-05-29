@@ -40,6 +40,7 @@ export const api = {
   createLavoratore: (data) => request('/lavoratori', { method: 'POST', body: data }),
   updateLavoratore: (id, data) => request(`/lavoratori/${id}`, { method: 'PUT', body: data }),
   deleteLavoratore: (id) => request(`/lavoratori/${id}`, { method: 'DELETE' }),
+  importLavoratoriCSV: (aziendaId, lavoratori) => request('/lavoratori/import-csv', { method: 'POST', body: { azienda_id: aziendaId, lavoratori } }),
 
   // Formazione
   getFormazione: (aziendaId) => request(`/formazione/azienda/${aziendaId}`),

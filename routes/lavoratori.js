@@ -20,6 +20,42 @@ router.get('/azienda/:aziendaId', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/import-csv', authMiddleware, adminOnly, async (req, res) => {
+  const { azienda_id, lavoratori } = req.body;
+  if (!canAccessAzienda(req, azienda_id)) return res.status(403).json({ error: 'Accesso negato' });
+  if (!azienda_id || !Array.isArray(lavoratori) || lavoratori.length === 0)
+    return res.status(400).json({ error: 'Dati mancanti' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const results = [];
+    for (const l of lavoratori) {
+      if (!l.nome || !l.cognome) continue;
+      const r = await client.query(
+        `INSERT INTO lavoratori (azienda_id, nome, cognome, data_nascita, luogo_nascita, codice_fiscale,
+          mansione, reparto, telefono, email, data_assunzione, fa_turni)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        [azienda_id, l.nome.trim(), l.cognome.trim(),
+         l.data_nascita || null, l.luogo_nascita || null,
+         l.codice_fiscale ? l.codice_fiscale.toUpperCase() : null,
+         l.mansione || null, l.reparto || null,
+         l.telefono || null, l.email || null,
+         l.data_assunzione || null,
+         l.fa_turni === 'true' || l.fa_turni === true || false]
+      );
+      results.push(r.rows[0]);
+    }
+    await client.query('COMMIT');
+    res.status(201).json({ imported: results.length, lavoratori: results });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Errore durante l\'importazione' });
+  } finally {
+    client.release();
+  }
+});
+
 router.post('/', authMiddleware, adminOnly, async (req, res) => {
   const { azienda_id, nome, cognome, mansione, reparto, data_assunzione } = req.body;
   if (!azienda_id || !nome || !cognome) return res.status(400).json({ error: 'Dati obbligatori mancanti' });

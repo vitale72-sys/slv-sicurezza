@@ -26,6 +26,8 @@ export default function AziendaDettaglio() {
   const [form, setForm] = useState({});
   const [badgeLav, setBadgeLav] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [csvRows, setCsvRows] = useState([]);
+  const [csvImporting, setCsvImporting] = useState(false);
   const f = (k,v) => setForm(x=>({...x,[k]:v}));
 
   async function openBadge(lav) {
@@ -78,6 +80,67 @@ export default function AziendaDettaglio() {
     if (t === 'lavoratori') { const r=await api.getLavoratori(id); setLavoratori(r); setData(x=>({...x,lavoratori:r})); return; }
     const loaders = { formazione:api.getFormazione, visite:api.getVisite, nomine:api.getNomine, attrezzature:api.getAttrezzature, documenti:api.getDocumenti };
     if (loaders[t]) { const r=await loaders[t](id); setData(x=>({...x,[t]:r})); }
+  }
+
+  function parseCSVLine(line) {
+    const result = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQuote = !inQuote; continue; }
+      if (c === ',' && !inQuote) { result.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function handleCSVFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const lines = ev.target.result.trim().split(/\r?\n/);
+      if (lines.length < 2) { alert('File CSV vuoto o senza dati.'); return; }
+      const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+      const rows = lines.slice(1)
+        .map(line => {
+          const vals = parseCSVLine(line);
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+          return obj;
+        })
+        .filter(r => r.nome || r.cognome);
+      setCsvRows(rows);
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function downloadCSVTemplate() {
+    const headers = 'nome,cognome,codice_fiscale,data_nascita,luogo_nascita,mansione,reparto,telefono,email,data_assunzione,fa_turni';
+    const example = 'Mario,Rossi,RSSMRA80A01H501X,1980-01-01,Roma,Operaio,Produzione,3331234567,mario.rossi@email.it,2020-01-15,false';
+    const blob = new Blob([headers + '\n' + example], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'template_lavoratori.csv';
+    a.click();
+  }
+
+  async function handleCSVImport() {
+    if (csvRows.length === 0) return;
+    setCsvImporting(true);
+    try {
+      const result = await api.importLavoratoriCSV(id, csvRows);
+      setLavoratori(l => [...l, ...result.lavoratori]);
+      setData(x => ({ ...x, lavoratori: [...(x.lavoratori || []), ...result.lavoratori] }));
+      alert(`Importati ${result.imported} lavoratori con successo.`);
+      setCsvRows([]);
+      setModal(null);
+    } catch (err) {
+      alert('Errore: ' + err.message);
+    } finally {
+      setCsvImporting(false);
+    }
   }
 
   async function handleSave() {
@@ -144,11 +207,16 @@ export default function AziendaDettaglio() {
         <div className="card-header">
           <span className="card-title" style={{textTransform:'capitalize'}}>{tab}</span>
           {isAdmin && (
-            <button className="btn btn-primary btn-sm" onClick={()=>{
-              const defaults = { formazione:{lavoratore_id:''}, visite:{lavoratore_id:'',giudizio:'Idoneo'}, nomine:{tipo:NOMINE_TIPI[0]}, documenti:{tipo:'DVR'} };
-              setForm(defaults[tab]||{});
-              setModal('add');
-            }}>+ Aggiungi</button>
+            <div style={{display:'flex',gap:8}}>
+              {tab==='lavoratori' && (
+                <button className="btn btn-secondary btn-sm" onClick={()=>{ setCsvRows([]); setModal('csv'); }}>⬆ Importa CSV</button>
+              )}
+              <button className="btn btn-primary btn-sm" onClick={()=>{
+                const defaults = { formazione:{lavoratore_id:''}, visite:{lavoratore_id:'',giudizio:'Idoneo'}, nomine:{tipo:NOMINE_TIPI[0]}, documenti:{tipo:'DVR'} };
+                setForm(defaults[tab]||{});
+                setModal('add');
+              }}>+ Aggiungi</button>
+            </div>
           )}
         </div>
 
@@ -184,6 +252,67 @@ export default function AziendaDettaglio() {
           </div>
         </div>
       )}
+
+      {/* Modal Importa CSV */}
+      {modal === 'csv' && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
+          <div className="modal" style={{maxWidth:760}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Importa lavoratori da CSV</h3>
+              <button className="modal-close" onClick={()=>setModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+                <button className="btn btn-secondary btn-sm" onClick={downloadCSVTemplate}>⬇ Scarica template CSV</button>
+                <span style={{fontSize:13,color:'#6b7280'}}>Compila il template e caricalo qui sotto.</span>
+              </div>
+              <div style={{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:13,color:'#374151'}}>
+                <strong>Colonne richieste:</strong> nome, cognome — <strong>Opzionali:</strong> codice_fiscale, data_nascita (YYYY-MM-DD), luogo_nascita, mansione, reparto, telefono, email, data_assunzione (YYYY-MM-DD), fa_turni (true/false)
+              </div>
+              <div className="form-group">
+                <label className="form-label">File CSV</label>
+                <input type="file" accept=".csv,text/csv" onChange={handleCSVFile} style={{fontSize:13}}/>
+              </div>
+              {csvRows.length > 0 && (
+                <>
+                  <div style={{fontSize:13,fontWeight:600,color:'#0f3460',margin:'14px 0 8px'}}>
+                    Anteprima — {csvRows.length} lavorator{csvRows.length===1?'e':'i'} trovat{csvRows.length===1?'o':'i'}
+                  </div>
+                  <div style={{maxHeight:280,overflowY:'auto',border:'1px solid #e2e8f0',borderRadius:6}}>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Cognome</th><th>Nome</th><th>C.F.</th><th>Mansione</th><th>Reparto</th><th>Data assunzione</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvRows.map((r,i)=>(
+                          <tr key={i}>
+                            <td style={{fontWeight:600}}>{r.cognome||'—'}</td>
+                            <td>{r.nome||'—'}</td>
+                            <td style={{fontSize:12}}>{r.codice_fiscale||'—'}</td>
+                            <td>{r.mansione||'—'}</td>
+                            <td>{r.reparto||'—'}</td>
+                            <td>{r.data_assunzione||'—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={()=>setModal(null)}>Annulla</button>
+              <button className="btn btn-primary" onClick={handleCSVImport} disabled={csvRows.length===0||csvImporting}>
+                {csvImporting ? 'Importazione...' : `Importa ${csvRows.length > 0 ? csvRows.length + ' lavoratori' : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Badge QR */}
       {badgeLav && (
         <div className="modal-overlay" onClick={()=>setBadgeLav(null)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
@@ -237,7 +366,7 @@ function Scad({data}) {
   return <span className={`badge ${b.cls}`}>{formatDate(data)} · {b.label}</span>;
 }
 
-function TableLavoratori({rows,isAdmin,onEdit,onDelete}) {
+function TableLavoratori({rows,isAdmin,onEdit,onDelete,onBadge}) {
   return <table><thead><tr><th>Cognome e nome</th><th>Mansione</th><th>Reparto</th><th>Assunzione</th><th>Stato</th><th></th></tr></thead>
     <tbody>{rows.length===0?<EmptyRow cols={6}/>:rows.map(r=><tr key={r.id}>
       <td style={{fontWeight:500}}>{r.cognome} {r.nome}</td>
