@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { t, getLingua, setLingua, lingue } from '../i18n/traduzioni.js';
 
 // ═══════════════════════════════════════════════════════════════
-// EseguiQuiz.jsx — Pagina pubblica per compilare il quiz
+// EseguiQuiz — Pagina pubblica per compilare il quiz
 // URL: /quiz/:quizId/:lavoratoreId
 // ═══════════════════════════════════════════════════════════════
 export function EseguiQuiz() {
@@ -11,9 +10,8 @@ export function EseguiQuiz() {
   const [quiz, setQuiz] = useState(null);
   const [domandaCorrente, setDomandaCorrente] = useState(0);
   const [risposte, setRisposte] = useState({});
-  const [step, setStep] = useState('lingua'); // lingua | quiz | risultato
+  const [step, setStep] = useState('inizio'); // inizio | quiz | risultato
   const [risultato, setRisultato] = useState(null);
-  const [lingua, setLinguaState] = useState(getLingua());
   const [loading, setLoading] = useState(false);
   const [tempo, setTempo] = useState(0);
   const timerRef = useRef(null);
@@ -25,11 +23,9 @@ export function EseguiQuiz() {
       .catch(console.error);
   }, [quizId]);
 
-  function handleLingua(codice) { setLingua(codice); setLinguaState(codice); }
-
   function iniziaQuiz() {
     setStep('quiz');
-    timerRef.current = setInterval(() => setTempo(t => t + 1), 1000);
+    timerRef.current = setInterval(() => setTempo(s => s + 1), 1000);
   }
 
   function handleRisposta(domandaId, rispostaId) {
@@ -46,7 +42,7 @@ export function EseguiQuiz() {
         body: JSON.stringify({
           lavoratore_id: lavoratoreId,
           risposte_date: risposte,
-          lingua_usata: lingua,
+          lingua_usata: 'it',
           tempo_impiegato: tempo
         })
       });
@@ -79,26 +75,11 @@ export function EseguiQuiz() {
           {quiz.descrizione && <p style={{fontSize:13,opacity:0.75,marginTop:6}}>{quiz.descrizione}</p>}
         </div>
 
-        {/* SCELTA LINGUA */}
-        {step === 'lingua' && (
+        {/* SCHERMATA INIZIALE */}
+        {step === 'inizio' && (
           <div style={{background:'white',borderRadius:14,border:'1px solid #e8ecf4',padding:32,textAlign:'center'}}>
-            <div style={{fontSize:24,marginBottom:16}}>🌍</div>
-            <h3 style={{fontSize:18,fontWeight:700,marginBottom:8}}>{t(lingua, 'qz_lingua')}</h3>
-            <div style={{display:'flex',justifyContent:'center',gap:10,flexWrap:'wrap',marginBottom:28}}>
-              {lingue.map(l => (
-                <button key={l.code} onClick={() => handleLingua(l.code)} style={{
-                  display:'flex',alignItems:'center',gap:8,
-                  padding:'10px 18px',borderRadius:10,cursor:'pointer',
-                  border: lingua === l.code ? '2px solid #0f3460' : '1.5px solid #e2e8f0',
-                  background: lingua === l.code ? '#eff6ff' : 'white',
-                  fontSize:14,fontWeight:600,
-                  color: lingua === l.code ? '#0f3460' : '#374151',
-                }}>
-                  <span style={{fontSize:20}}>{l.flag}</span>
-                  <span>{l.label}</span>
-                </button>
-              ))}
-            </div>
+            <div style={{fontSize:24,marginBottom:16}}>📝</div>
+            <h3 style={{fontSize:18,fontWeight:700,marginBottom:8}}>Quiz di formazione</h3>
             <div style={{background:'#f8fafc',borderRadius:10,padding:16,marginBottom:24,textAlign:'left',fontSize:14}}>
               <div style={{marginBottom:6}}>📝 <strong>{quiz.domande?.length || '—'}</strong> domande</div>
               <div style={{marginBottom:6}}>✅ Punteggio minimo: <strong>{quiz.punteggio_minimo}%</strong></div>
@@ -117,7 +98,7 @@ export function EseguiQuiz() {
             {/* Progress bar */}
             <div style={{background:'white',borderRadius:10,padding:'14px 20px',marginBottom:16,border:'1px solid #e8ecf4',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span style={{fontSize:13,fontWeight:600,color:'#6b7280'}}>
-                {t(lingua, 'qz_domanda')} {domandaCorrente + 1} {t(lingua, 'qz_di')} {quiz.domande.length}
+                Domanda {domandaCorrente + 1} di {quiz.domande.length}
               </span>
               <span style={{fontSize:13,color:'#6b7280'}}>⏱ {formatTempo(tempo)}</span>
             </div>
@@ -169,21 +150,21 @@ export function EseguiQuiz() {
                 onClick={() => setDomandaCorrente(d => d - 1)}
                 disabled={domandaCorrente === 0}
                 style={{flex:1,justifyContent:'center'}}>
-                {t(lingua, 'qz_indietro')}
+                ← Indietro
               </button>
               {domandaCorrente < quiz.domande.length - 1 ? (
                 <button className="btn btn-primary"
                   onClick={() => setDomandaCorrente(d => d + 1)}
                   disabled={!risposte[quiz.domande[domandaCorrente].id]}
                   style={{flex:1,justifyContent:'center'}}>
-                  {t(lingua, 'qz_avanti')}
+                  Avanti →
                 </button>
               ) : (
                 <button className="btn btn-primary"
                   onClick={handleInvia}
                   disabled={loading || !risposte[quiz.domande[domandaCorrente].id]}
                   style={{flex:1,justifyContent:'center',background:'#059669'}}>
-                  {loading ? '...' : t(lingua, 'qz_invia')}
+                  {loading ? '...' : 'Invia risposte'}
                 </button>
               )}
             </div>
@@ -202,7 +183,7 @@ export function EseguiQuiz() {
               {risultato.superato ? '✅' : '❌'}
             </div>
             <h2 style={{fontSize:24,fontWeight:800,marginBottom:8,color: risultato.superato ? '#059669' : '#dc2626'}}>
-              {t(lingua, risultato.superato ? 'qz_superato' : 'qz_non_superato')}
+              {risultato.superato ? '✅ Superato!' : '❌ Non superato'}
             </h2>
 
             {/* Punteggio grande */}
@@ -215,10 +196,10 @@ export function EseguiQuiz() {
                 {risultato.punteggio}<span style={{fontSize:28}}>%</span>
               </div>
               <div style={{fontSize:14,color:'#6b7280',marginTop:8}}>
-                {t(lingua, 'qz_risposte')}: {risultato.risposte_giuste} {t(lingua, 'qz_su')} {risultato.totale_domande}
+                Risposte corrette: {risultato.risposte_giuste} su {risultato.totale_domande}
               </div>
               <div style={{fontSize:13,color:'#9ca3af',marginTop:4}}>
-                {t(lingua, 'qz_minimo')}: {risultato.punteggio_minimo}%
+                Punteggio minimo richiesto: {risultato.punteggio_minimo}%
               </div>
             </div>
 
@@ -229,9 +210,9 @@ export function EseguiQuiz() {
             {!risultato.superato && (
               <button className="btn btn-primary" onClick={() => {
                 setStep('quiz'); setDomandaCorrente(0); setRisposte({}); setTempo(0);
-                timerRef.current = setInterval(() => setTempo(t => t + 1), 1000);
+                timerRef.current = setInterval(() => setTempo(s => s + 1), 1000);
               }} style={{width:'100%',justifyContent:'center',padding:13}}>
-                {t(lingua, 'qz_riprova')}
+                Riprova
               </button>
             )}
           </div>
@@ -242,9 +223,9 @@ export function EseguiQuiz() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// QuizAdmin.jsx — Gestione quiz dentro AziendaDettaglio
+// QuizAdmin — Gestione quiz dentro AziendaDettaglio
 // ═══════════════════════════════════════════════════════════════
-export function QuizAdmin({ aziendaId, lavoratori, lingua = 'it' }) {
+export function QuizAdmin({ aziendaId, lavoratori }) {
   const [lista, setLista] = useState([]);
   const [modal, setModal] = useState(null); // null | 'nuovo' | 'domande' | 'risultati'
   const [selected, setSelected] = useState(null);
@@ -328,14 +309,14 @@ export function QuizAdmin({ aziendaId, lavoratori, lingua = 'it' }) {
     setLista(l => l.filter(q => q.id !== id));
   }
 
-  if (loading) return <div style={{padding:20,color:'#6b7280'}}>{t(lingua, 'caricamento')}</div>;
+  if (loading) return <div style={{padding:20,color:'#6b7280'}}>Caricamento...</div>;
 
   return (
     <div>
       <div className="card-header">
         <span className="card-title">📝 Quiz</span>
         <button className="btn btn-primary btn-sm"
-          onClick={() => { setForm({ punteggio_minimo: 70, lingua: 'it' }); setModal('nuovo'); }}>
+          onClick={() => { setForm({ punteggio_minimo: 70 }); setModal('nuovo'); }}>
           + Nuovo quiz
         </button>
       </div>
@@ -509,9 +490,7 @@ export function QuizAdmin({ aziendaId, lavoratori, lingua = 'it' }) {
                             </span>
                           </td>
                           <td style={{fontSize:13}}>{new Date(r.completato_il).toLocaleDateString('it-IT')}</td>
-                          <td style={{fontSize:13}}>
-                            {lingue.find(l => l.code === r.lingua_usata)?.flag || r.lingua_usata}
-                          </td>
+                          <td style={{fontSize:13}}>{r.lingua_usata || 'it'}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import NearMiss from './NearMiss.jsx';
 import { WhistleblowingAdmin } from './Whistleblowing.jsx';
 import { QuizAdmin } from './Quiz.jsx';
-function getLingua() { return localStorage.getItem('slv_lingua') || 'it'; }
+function getLingua() { return 'it'; }
 
 const NOMINE_TIPI = ['RSPP Interno','RSPP Esterno','RLS','Medico Competente','Addetto Antincendio','Addetto Primo Soccorso','ASPP','Preposto','Dirigente'];
 const GIUDIZI = ['Idoneo','Idoneo con prescrizioni','Idoneo con limitazioni','Non idoneo temporaneo','Non idoneo'];

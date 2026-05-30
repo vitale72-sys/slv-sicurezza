@@ -78,7 +78,7 @@ export default function Aziende() {
                         <button className="btn btn-danger btn-sm" onClick={()=>handleDelete(a.id)}>Elimina</button>
                       </div>
                     )}
-                    <button className="btn btn-secondary btn-sm" style={{marginLeft:user?.role==='admin'?0:0}} onClick={()=>navigate(`/aziende/${a.id}`)}>Dettaglio →</button>
+                    <button className="btn btn-apri" onClick={()=>navigate(`/aziende/${a.id}`)}>Apri azienda →</button>
                   </td>
                 </tr>
               ))}

@@ -81,6 +81,8 @@ body {
 .btn-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
 .btn-success:hover { background: #a7f3d0; }
 .btn-sm { padding: 5px 11px; font-size: 13px; }
+.btn-apri { background: #0f3460; color: #fff; font-weight: 600; border: none; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.btn-apri:hover { background: #16427a; }
 
 /* Tables */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

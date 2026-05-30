@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { formatDate } from '../api.js';
-import { t } from '../i18n/traduzioni.js';
 
 const GRAVITA_COLORI = { bassa: 'badge-ok', media: 'badge-warning', alta: 'badge-danger' };
 const STATO_COLORI = { aperto: 'badge-danger', in_corso: 'badge-warning', chiuso: 'badge-ok' };
+const GRAVITA_LABEL = { bassa: 'Bassa', media: 'Media', alta: 'Alta' };
+const STATO_LABEL = { aperto: 'Aperto', in_corso: 'In corso', chiuso: 'Chiuso' };
 
-export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
+export default function NearMiss({ aziendaId, canEdit }) {
   const [lista, setLista] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
@@ -19,7 +19,7 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
   }, [aziendaId]);
 
   async function handleSave() {
-    if (!form.descrizione) return alert(t(lingua, 'nm_descrizione') + ' richiesta');
+    if (!form.descrizione) return alert('Descrizione richiesta');
     try {
       const token = localStorage.getItem('slv_token');
       const url = form.id ? `/api/nearmiss/${form.id}` : '/api/nearmiss';
@@ -38,7 +38,7 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
   }
 
   async function handleDelete(id) {
-    if (!confirm(t(lingua, 'conferma_elimina'))) return;
+    if (!confirm('Eliminare questo elemento?')) return;
     const token = localStorage.getItem('slv_token');
     await fetch(`/api/nearmiss/${id}`, {
       method: 'DELETE',
@@ -47,7 +47,7 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
     setLista(l => l.filter(i => i.id !== id));
   }
 
-  if (loading) return <div style={{padding:20,color:'#6b7280'}}>{t(lingua, 'caricamento')}</div>;
+  if (loading) return <div style={{padding:20,color:'#6b7280'}}>Caricamento...</div>;
 
   return (
     <div>
@@ -55,7 +55,7 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
         <span className="card-title">⚠️ Near Miss</span>
         {canEdit && (
           <button className="btn btn-primary btn-sm" onClick={() => { setForm({ gravita: 'bassa', stato: 'aperto' }); setModal(true); }}>
-            {t(lingua, 'aggiungi')}
+            + Aggiungi
           </button>
         )}
       </div>
@@ -67,10 +67,10 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
           <table>
             <thead><tr>
               <th>Data</th>
-              <th>{t(lingua, 'nm_luogo')}</th>
-              <th>{t(lingua, 'nm_descrizione').replace(' *','')}</th>
-              <th>{t(lingua, 'nm_gravita')}</th>
-              <th>{t(lingua, 'nm_stato')}</th>
+              <th>Luogo</th>
+              <th>Descrizione</th>
+              <th>Gravità</th>
+              <th>Stato</th>
               <th></th>
             </tr></thead>
             <tbody>
@@ -83,12 +83,12 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
                   </td>
                   <td>
                     <span className={`badge ${GRAVITA_COLORI[r.gravita]}`}>
-                      {t(lingua, `nm_${r.gravita}`)}
+                      {GRAVITA_LABEL[r.gravita] || r.gravita}
                     </span>
                   </td>
                   <td>
                     <span className={`badge ${STATO_COLORI[r.stato]}`}>
-                      {t(lingua, `nm_${r.stato}`)}
+                      {STATO_LABEL[r.stato] || r.stato}
                     </span>
                   </td>
                   <td>
@@ -96,10 +96,10 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
                       <div style={{display:'flex',gap:5}}>
                         <button className="btn btn-secondary btn-sm"
                           onClick={() => { setForm({...r}); setModal(true); }}>
-                          {t(lingua, 'modifica')}
+                          Modifica
                         </button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.id)}>
-                          {t(lingua, 'elimina')}
+                          Elimina
                         </button>
                       </div>
                     )}
@@ -115,70 +115,70 @@ export default function NearMiss({ aziendaId, canEdit, lingua = 'it' }) {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal">
             <div className="modal-header">
-              <h3>{t(lingua, 'nm_titolo')}</h3>
+              <h3>Segnalazione Near Miss</h3>
               <button className="modal-close" onClick={() => setModal(false)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-grid">
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'nm_luogo')}</label>
+                  <label className="form-label">Luogo</label>
                   <input className="form-input" value={form.luogo || ''} onChange={e => f('luogo', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'nm_reparto')}</label>
+                  <label className="form-label">Reparto</label>
                   <input className="form-input" value={form.reparto || ''} onChange={e => f('reparto', e.target.value)} />
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">{t(lingua, 'nm_descrizione')}</label>
+                <label className="form-label">Descrizione accaduto *</label>
                 <textarea className="form-input" rows="3" value={form.descrizione || ''}
                   onChange={e => f('descrizione', e.target.value)}
                   placeholder="Descrivi cosa è accaduto..." />
               </div>
               <div className="form-group">
-                <label className="form-label">{t(lingua, 'nm_causa')}</label>
+                <label className="form-label">Causa probabile</label>
                 <textarea className="form-input" rows="2" value={form.causa_probabile || ''}
                   onChange={e => f('causa_probabile', e.target.value)} />
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'nm_gravita')}</label>
+                  <label className="form-label">Gravità</label>
                   <select className="form-input" value={form.gravita || 'bassa'} onChange={e => f('gravita', e.target.value)}>
-                    <option value="bassa">{t(lingua, 'nm_bassa')}</option>
-                    <option value="media">{t(lingua, 'nm_media')}</option>
-                    <option value="alta">{t(lingua, 'nm_alta')}</option>
+                    <option value="bassa">Bassa</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'nm_persone')}</label>
+                  <label className="form-label">Persone coinvolte</label>
                   <input className="form-input" type="number" value={form.persone_coinvolte || 0}
                     onChange={e => f('persone_coinvolte', e.target.value)} />
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">{t(lingua, 'nm_azione')}</label>
+                <label className="form-label">Azione correttiva</label>
                 <textarea className="form-input" rows="2" value={form.azione_correttiva || ''}
                   onChange={e => f('azione_correttiva', e.target.value)} />
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'nm_stato')}</label>
+                  <label className="form-label">Stato</label>
                   <select className="form-input" value={form.stato || 'aperto'} onChange={e => f('stato', e.target.value)}>
-                    <option value="aperto">{t(lingua, 'nm_aperto')}</option>
-                    <option value="in_corso">{t(lingua, 'nm_in_corso')}</option>
-                    <option value="chiuso">{t(lingua, 'nm_chiuso')}</option>
+                    <option value="aperto">Aperto</option>
+                    <option value="in_corso">In corso</option>
+                    <option value="chiuso">Chiuso</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'nm_segnalato')}</label>
+                  <label className="form-label">Segnalato da</label>
                   <input className="form-input" value={form.segnalato_da || ''}
                     onChange={e => f('segnalato_da', e.target.value)} placeholder="Anonimo" />
                 </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setModal(false)}>{t(lingua, 'annulla')}</button>
-              <button className="btn btn-primary" onClick={handleSave}>{t(lingua, 'salva')}</button>
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Annulla</button>
+              <button className="btn btn-primary" onClick={handleSave}>Salva</button>
             </div>
           </div>
         </div>

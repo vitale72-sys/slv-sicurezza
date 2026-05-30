@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
-import { lingue, t, setLingua, getLingua } from '../i18n/traduzioni.js';
 
 export default function Login() {
   const { login } = useAuth();
@@ -10,12 +9,6 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [lingua, setLinguaState] = useState(getLingua());
-
-  function handleLingua(codice) {
-    setLingua(codice);
-    setLinguaState(codice);
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,28 +28,6 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        {/* Selettore lingua */}
-        <div style={{display:'flex',justifyContent:'center',gap:8,marginBottom:24,flexWrap:'wrap'}}>
-          {lingue.map(l => (
-            <button
-              key={l.code}
-              onClick={() => handleLingua(l.code)}
-              style={{
-                display:'flex', alignItems:'center', gap:5,
-                padding:'5px 12px', borderRadius:20, cursor:'pointer',
-                border: lingua === l.code ? '2px solid #0f3460' : '1.5px solid #e2e8f0',
-                background: lingua === l.code ? '#eff6ff' : '#f8fafc',
-                fontSize:12, fontWeight:600,
-                color: lingua === l.code ? '#0f3460' : '#6b7280',
-                transition:'all 0.15s'
-              }}
-            >
-              <span>{l.flag}</span>
-              <span>{l.label}</span>
-            </button>
-          ))}
-        </div>
-
         <div className="login-logo">
           <h1>SLV Sicurezza</h1>
           <p>Gestionale sicurezza sul lavoro</p>
@@ -78,7 +49,7 @@ export default function Login() {
           {error && <div style={{color:'#dc2626',fontSize:13,marginBottom:12}}>{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={loading}
             style={{width:'100%',justifyContent:'center',padding:'11px'}}>
-            {loading ? t(lingua, 'caricamento') : 'Accedi'}
+            {loading ? 'Caricamento...' : 'Accedi'}
           </button>
         </form>
 

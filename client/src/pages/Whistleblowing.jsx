@@ -1,23 +1,16 @@
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+
+const CATEGORIE = ['Violazione sicurezza sul lavoro','Molestie o discriminazioni','Corruzione o frodi','Violazione normativa ambientale','Illeciti amministrativi','Altro'];
+const STATO_WB_LABEL = { ricevuta: 'Ricevuta', in_istruttoria: 'In istruttoria', chiusa: 'Chiusa' };
+const STATO_COL = { ricevuta: 'badge-danger', in_istruttoria: 'badge-warning', chiusa: 'badge-ok' };
+
 // ═══════════════════════════════════════════════════════════════
-// WhistleblowingPubblico.jsx — Pagina pubblica senza login
+// WhistleblowingPubblico — Pagina pubblica senza login
 // URL: /segnala/:aziendaId
 // ═══════════════════════════════════════════════════════════════
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { lingue, t, getLingua, setLingua } from '../i18n/traduzioni.js';
-
-const CATEGORIE = {
-  it: ['Violazione sicurezza sul lavoro','Molestie o discriminazioni','Corruzione o frodi','Violazione normativa ambientale','Illeciti amministrativi','Altro'],
-  en: ['Workplace safety violation','Harassment or discrimination','Corruption or fraud','Environmental violation','Administrative offenses','Other'],
-  fr: ['Violation sécurité au travail','Harcèlement ou discrimination','Corruption ou fraude','Violation environnementale','Infractions administratives','Autre'],
-  ro: ['Încălcarea siguranței la muncă','Hărțuire sau discriminare','Corupție sau fraudă','Încălcare de mediu','Infracțiuni administrative','Altele'],
-  al: ['Shkelje sigurie në punë','Ngacmim ose diskriminim','Korrupsion ose mashtrim','Shkelje mjedisore','Shkelje administrative','Tjetër'],
-  hi: ['कार्यस्थल सुरक्षा उल्लंघन','उत्पीड़न या भेदभाव','भ्रष्टाचार या धोखाधड़ी','पर्यावरण उल्लंघन','प्रशासनिक अपराध','अन्य'],
-};
-
 export function WhistleblowingPubblico() {
   const { aziendaId } = useParams();
-  const [lingua, setLinguaState] = useState(getLingua());
   const [form, setForm] = useState({ categoria: '', descrizione: '', luogo: '', data_fatto: '' });
   const [step, setStep] = useState('form'); // form | successo | verifica
   const [codice, setCodice] = useState('');
@@ -26,8 +19,6 @@ export function WhistleblowingPubblico() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const f = (k, v) => setForm(x => ({...x, [k]: v}));
-
-  function handleLingua(codice) { setLingua(codice); setLinguaState(codice); }
 
   async function handleInvia(e) {
     e.preventDefault();
@@ -67,8 +58,6 @@ export function WhistleblowingPubblico() {
     }
   }
 
-  const categorie = CATEGORIE[lingua] || CATEGORIE.it;
-
   return (
     <div style={{minHeight:'100vh',background:'#f4f6fa',padding:'24px 16px'}}>
       <div style={{maxWidth:560,margin:'0 auto'}}>
@@ -76,21 +65,7 @@ export function WhistleblowingPubblico() {
         <div style={{background:'#0f3460',borderRadius:14,padding:'24px',marginBottom:20,color:'white',textAlign:'center'}}>
           <div style={{fontSize:32,marginBottom:8}}>🔒</div>
           <h2 style={{fontSize:20,fontWeight:700,marginBottom:6}}>SLV Sicurezza</h2>
-          <p style={{fontSize:14,opacity:0.75}}>{t(lingua, 'wb_anonima')}</p>
-        </div>
-
-        {/* Selettore lingua */}
-        <div style={{display:'flex',justifyContent:'center',gap:6,marginBottom:20,flexWrap:'wrap'}}>
-          {lingue.map(l => (
-            <button key={l.code} onClick={() => handleLingua(l.code)} style={{
-              padding:'5px 10px',borderRadius:20,cursor:'pointer',fontSize:12,fontWeight:600,
-              border: lingua === l.code ? '2px solid #0f3460' : '1.5px solid #e2e8f0',
-              background: lingua === l.code ? '#eff6ff' : 'white',
-              color: lingua === l.code ? '#0f3460' : '#6b7280',
-            }}>
-              {l.flag} {l.label}
-            </button>
-          ))}
+          <p style={{fontSize:14,opacity:0.75}}>Questa segnalazione è completamente anonima</p>
         </div>
 
         {/* Tab: form / verifica */}
@@ -102,7 +77,7 @@ export function WhistleblowingPubblico() {
               background: step === 'form' ? '#0f3460' : 'transparent',
               color: step === 'form' ? 'white' : '#6b7280',
             }}>
-              {t(lingua, 'wb_titolo')}
+              Segnalazione anonima
             </button>
             <button onClick={() => setStep('verifica')} style={{
               flex:1,padding:'10px',borderRadius:8,border:'none',cursor:'pointer',
@@ -110,7 +85,7 @@ export function WhistleblowingPubblico() {
               background: step === 'verifica' ? '#0f3460' : 'transparent',
               color: step === 'verifica' ? 'white' : '#6b7280',
             }}>
-              {t(lingua, 'wb_verifica')}
+              Verifica stato segnalazione
             </button>
           </div>
         )}
@@ -124,25 +99,25 @@ export function WhistleblowingPubblico() {
                 ⚠️ Non inserire il tuo nome o dati identificativi nel testo.
               </div>
               <div className="form-group">
-                <label className="form-label">{t(lingua, 'wb_categoria')}</label>
+                <label className="form-label">Categoria</label>
                 <select className="form-input" value={form.categoria} onChange={e => f('categoria', e.target.value)}>
                   <option value="">—</option>
-                  {categorie.map(c => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORIE.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">{t(lingua, 'wb_descrizione')}</label>
+                <label className="form-label">Descrizione *</label>
                 <textarea className="form-input" rows="5" value={form.descrizione}
                   onChange={e => f('descrizione', e.target.value)}
                   placeholder="Descrivi in dettaglio cosa hai osservato..." required />
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'wb_luogo')}</label>
+                  <label className="form-label">Luogo (opzionale)</label>
                   <input className="form-input" value={form.luogo} onChange={e => f('luogo', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'wb_data')}</label>
+                  <label className="form-label">Data del fatto (opzionale)</label>
                   <input className="form-input" type="date" value={form.data_fatto}
                     onChange={e => f('data_fatto', e.target.value)} />
                 </div>
@@ -150,7 +125,7 @@ export function WhistleblowingPubblico() {
               {error && <div style={{color:'#dc2626',fontSize:13,marginBottom:12}}>{error}</div>}
               <button type="submit" className="btn btn-primary" disabled={loading}
                 style={{width:'100%',justifyContent:'center',padding:12}}>
-                {loading ? t(lingua, 'caricamento') : t(lingua, 'wb_invia')}
+                {loading ? 'Caricamento...' : 'Invia segnalazione'}
               </button>
             </form>
           )}
@@ -161,17 +136,17 @@ export function WhistleblowingPubblico() {
               <div style={{fontSize:48,marginBottom:16}}>✅</div>
               <h3 style={{fontSize:18,fontWeight:700,marginBottom:12}}>Segnalazione ricevuta</h3>
               <p style={{fontSize:14,color:'#6b7280',marginBottom:24}}>
-                {t(lingua, 'wb_conserva')}
+                Conserva questo codice per verificare lo stato
               </p>
               <div style={{background:'#f0f9ff',border:'2px solid #0f3460',borderRadius:12,padding:'20px',marginBottom:24}}>
                 <div style={{fontSize:11,color:'#6b7280',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.5px'}}>
-                  {t(lingua, 'wb_codice')}
+                  Il tuo codice segnalazione
                 </div>
                 <div style={{fontSize:28,fontWeight:800,color:'#0f3460',letterSpacing:4}}>{codice}</div>
               </div>
               <button className="btn btn-secondary" onClick={() => { setStep('verifica'); setCodiceCerca(codice); }}
                 style={{width:'100%',justifyContent:'center'}}>
-                {t(lingua, 'wb_verifica')}
+                Verifica stato segnalazione
               </button>
             </div>
           )}
@@ -181,7 +156,7 @@ export function WhistleblowingPubblico() {
             <div>
               <form onSubmit={handleVerifica}>
                 <div className="form-group">
-                  <label className="form-label">{t(lingua, 'wb_codice')}</label>
+                  <label className="form-label">Il tuo codice segnalazione</label>
                   <input className="form-input" value={codiceCerca}
                     onChange={e => setCodiceCerca(e.target.value.toUpperCase())}
                     placeholder="WB-XXXXXXXX" style={{textTransform:'uppercase',fontFamily:'monospace',fontSize:16}}/>
@@ -189,7 +164,7 @@ export function WhistleblowingPubblico() {
                 {error && <div style={{color:'#dc2626',fontSize:13,marginBottom:12}}>{error}</div>}
                 <button type="submit" className="btn btn-primary" disabled={loading}
                   style={{width:'100%',justifyContent:'center',padding:12}}>
-                  {loading ? t(lingua, 'caricamento') : t(lingua, 'wb_verifica')}
+                  {loading ? 'Caricamento...' : 'Verifica stato segnalazione'}
                 </button>
               </form>
               {statoSegnalazione && (
@@ -199,9 +174,9 @@ export function WhistleblowingPubblico() {
                     <strong>{statoSegnalazione.codice_segnalazione}</strong>
                   </div>
                   <div style={{marginBottom:12}}>
-                    <span style={{fontSize:11,color:'#6b7280',textTransform:'uppercase'}}>{t(lingua, 'wb_stato')}: </span>
+                    <span style={{fontSize:11,color:'#6b7280',textTransform:'uppercase'}}>Stato: </span>
                     <span className={`badge ${statoSegnalazione.stato === 'chiusa' ? 'badge-ok' : statoSegnalazione.stato === 'in_istruttoria' ? 'badge-warning' : 'badge-info'}`}>
-                      {t(lingua, `wb_${statoSegnalazione.stato}`)}
+                      {STATO_WB_LABEL[statoSegnalazione.stato] || statoSegnalazione.stato}
                     </span>
                   </div>
                   <div style={{marginBottom:12}}>
@@ -210,7 +185,7 @@ export function WhistleblowingPubblico() {
                   </div>
                   {statoSegnalazione.risposta_admin && (
                     <div style={{background:'#eff6ff',borderRadius:8,padding:14,marginTop:12}}>
-                      <div style={{fontSize:11,color:'#6b7280',marginBottom:6,textTransform:'uppercase'}}>{t(lingua, 'wb_risposta')}</div>
+                      <div style={{fontSize:11,color:'#6b7280',marginBottom:6,textTransform:'uppercase'}}>Risposta</div>
                       <p style={{fontSize:14,color:'#1a1a2e'}}>{statoSegnalazione.risposta_admin}</p>
                     </div>
                   )}
@@ -225,9 +200,9 @@ export function WhistleblowingPubblico() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// WhistleblowingAdmin.jsx — Vista admin dentro AziendaDettaglio
+// WhistleblowingAdmin — Vista admin dentro AziendaDettaglio
 // ═══════════════════════════════════════════════════════════════
-export function WhistleblowingAdmin({ aziendaId, lingua = 'it' }) {
+export function WhistleblowingAdmin({ aziendaId }) {
   const [lista, setLista] = useState([]);
   const [selected, setSelected] = useState(null);
   const [risposta, setRisposta] = useState('');
@@ -253,9 +228,7 @@ export function WhistleblowingAdmin({ aziendaId, lingua = 'it' }) {
     setSelected(null);
   }
 
-  const STATO_COL = { ricevuta: 'badge-danger', in_istruttoria: 'badge-warning', chiusa: 'badge-ok' };
-
-  if (loading) return <div style={{padding:20,color:'#6b7280'}}>{t(lingua, 'caricamento')}</div>;
+  if (loading) return <div style={{padding:20,color:'#6b7280'}}>Caricamento...</div>;
 
   return (
     <div>
@@ -275,7 +248,7 @@ export function WhistleblowingAdmin({ aziendaId, lingua = 'it' }) {
         <div className="table-wrap">
           <table>
             <thead><tr>
-              <th>Codice</th><th>Categoria</th><th>Ricevuta il</th><th>{t(lingua, 'wb_stato')}</th><th></th>
+              <th>Codice</th><th>Categoria</th><th>Ricevuta il</th><th>Stato</th><th></th>
             </tr></thead>
             <tbody>
               {lista.map(r => (
@@ -283,7 +256,7 @@ export function WhistleblowingAdmin({ aziendaId, lingua = 'it' }) {
                   <td style={{fontFamily:'monospace',fontWeight:600}}>{r.codice_segnalazione}</td>
                   <td>{r.categoria || '—'}</td>
                   <td style={{fontSize:13}}>{new Date(r.ricevuta_il).toLocaleDateString('it-IT')}</td>
-                  <td><span className={`badge ${STATO_COL[r.stato]}`}>{t(lingua, `wb_${r.stato}`)}</span></td>
+                  <td><span className={`badge ${STATO_COL[r.stato]}`}>{STATO_WB_LABEL[r.stato] || r.stato}</span></td>
                   <td>
                     <button className="btn btn-secondary btn-sm"
                       onClick={() => { setSelected(r); setRisposta(r.risposta_admin || ''); setStato(r.stato); }}>
