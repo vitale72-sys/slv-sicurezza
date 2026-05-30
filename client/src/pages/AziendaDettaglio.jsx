@@ -3,11 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api, formatDate, scadenzaBadge } from '../api.js';
 import { useAuth } from '../App.jsx';
 import QRCode from 'qrcode';
-import NearMiss from './NearMiss.jsx';
-import { WhistleblowingAdmin } from './Whistleblowing.jsx';
-import { QuizAdmin } from './Quiz.jsx';
-function getLingua() { return 'it'; }
-
 const NOMINE_TIPI = ['RSPP Interno','RSPP Esterno','RLS','Medico Competente','Addetto Antincendio','Addetto Primo Soccorso','ASPP','Preposto','Dirigente'];
 const GIUDIZI = ['Idoneo','Idoneo con prescrizioni','Idoneo con limitazioni','Non idoneo temporaneo','Non idoneo'];
 const DOC_TIPI = ['DVR','POS','DUVRI','Piano di emergenza','Registro infortuni','Valutazione rischio rumore','Valutazione rischio vibr.','Altro'];
@@ -194,16 +189,12 @@ export default function AziendaDettaglio() {
       </div>
 
       <div className="tabs">
-        {[['lavoratori','👷 Lavoratori'],['formazione','📋 Formazione'],['visite','🏥 Visite mediche'],['nomine','📄 Nomine'],['attrezzature','🔧 Attrezzature'],['documenti','🗂 Documenti'],['near_miss','⚠️ Near Miss'],['whistleblowing','🔒 Whistleblowing'],['quiz','📝 Quiz']].map(([k,l])=>(
+        {[['lavoratori','👷 Lavoratori'],['formazione','📋 Formazione'],['visite','🏥 Visite mediche'],['nomine','📄 Nomine'],['attrezzature','🔧 Attrezzature'],['documenti','🗂 Documenti']].map(([k,l])=>(
           <div key={k} className={`tab${tab===k?' active':''}`} onClick={()=>loadTab(k)}>{l}</div>
         ))}
       </div>
 
-      {tab==='near_miss' && <NearMiss aziendaId={id} canEdit={isAdmin} lingua={getLingua()} />}
-      {tab==='whistleblowing' && isAdmin && <WhistleblowingAdmin aziendaId={id} lingua={getLingua()} />}
-      {tab==='quiz' && <QuizAdmin aziendaId={id} lavoratori={lavoratori} lingua={getLingua()} />}
-
-      {!['near_miss','whistleblowing','quiz'].includes(tab) && <div className="card">
+      <div className="card">
         <div className="card-header">
           <span className="card-title" style={{textTransform:'capitalize'}}>{tab}</span>
           {isAdmin && (
@@ -228,7 +219,7 @@ export default function AziendaDettaglio() {
           {tab==='attrezzature' && <TableAttrezzature rows={rows} isAdmin={isAdmin} onEdit={r=>{setForm({...r});setModal('add');}} onDelete={handleDelete} />}
           {tab==='documenti' && <TableDocumenti rows={rows} isAdmin={isAdmin} onDelete={handleDelete} />}
         </div>
-      </div>}
+      </div>
 
       {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(null)}>
