@@ -32,14 +32,14 @@ export default function Layout() {
             {icons.dashboard} Dashboard
           </NavLink>
           <NavLink to="/aziende" className={({isActive})=>`nav-item${isActive?' active':''}`} onClick={closeMenu}>
-            {icons.aziende} Aziende clienti
+            {icons.aziende} Aziende
           </NavLink>
           <NavLink to="/calendario" className={({isActive})=>`nav-item${isActive?' active':''}`} onClick={closeMenu}>
-            {icons.calendario} Calendario scadenze
+            {icons.calendario} Calendario
           </NavLink>
           {user?.role==='admin' && (
             <NavLink to="/utenti" className={({isActive})=>`nav-item${isActive?' active':''}`} onClick={closeMenu}>
-              {icons.utenti} Utenti portale
+              {icons.utenti} Utenti
             </NavLink>
           )}
         </nav>
