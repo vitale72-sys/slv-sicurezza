@@ -45,7 +45,7 @@ export default function Aziende() {
   return (
     <div className="page">
       <div className="topbar" style={{marginLeft:-24,marginRight:-24,marginTop:-24,marginBottom:24,paddingLeft:24,paddingRight:24}}>
-        <span className="topbar-title">Aziende clienti</span>
+        <span className="topbar-title">Aziende</span>
         {user?.role==='admin' && (
           <button className="btn btn-primary btn-sm" onClick={()=>{setForm(emptyForm);setShowModal(true)}}>
             + Nuova azienda

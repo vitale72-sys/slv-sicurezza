@@ -34,7 +34,7 @@ export default function Utenti() {
   return (
     <div className="page">
       <div className="topbar" style={{marginLeft:-24,marginRight:-24,marginTop:-24,marginBottom:24,paddingLeft:24,paddingRight:24}}>
-        <span className="topbar-title">Utenti portale clienti</span>
+        <span className="topbar-title">Utenti</span>
         <button className="btn btn-primary btn-sm" onClick={()=>setShowModal(true)}>+ Nuovo utente</button>
       </div>
 

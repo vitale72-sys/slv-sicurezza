@@ -89,7 +89,7 @@ export default function Calendario() {
   return (
     <div className="page">
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
-        <span style={{fontSize:18,fontWeight:700}}>Calendario scadenze</span>
+        <span style={{fontSize:18,fontWeight:700}}>Calendario</span>
         <div className="cal-nav">
           <button onClick={prevMese}>‹</button>
           <span className="cal-month">{MESI[mese]} {anno}</span>
